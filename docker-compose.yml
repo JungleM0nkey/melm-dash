@@ -1,0 +1,72 @@
+services:
+  melm-dash:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: melm-dash
+    restart: unless-stopped
+
+    ports:
+      - "3001:3001"
+
+    volumes:
+      # System monitoring access (read-only)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3001
+      - LOG_LEVEL=info
+      # Collection intervals
+      - INTERVAL_CPU=2000
+      - INTERVAL_MEMORY=3000
+      - INTERVAL_NETWORK=2000
+      - INTERVAL_DOCKER=5000
+      - INTERVAL_STORAGE=30000
+      - INTERVAL_SERVICES=10000
+      - INTERVAL_PORTS=10000
+      - INTERVAL_SYSTEM=60000
+      # History
+      - HISTORY_MAX_POINTS=300
+      # WebSocket configuration
+      - WS_MAX_PAYLOAD=1048576
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    # Security
+    security_opt:
+      - no-new-privileges:true
+    cap_add:
+      - SYS_PTRACE
+    # Grant docker socket access to non-root user
+    # Check your host's docker GID: getent group docker | cut -d: -f3
+    group_add:
+      - "109"  # docker group GID on host
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  default:
+    name: melm-network

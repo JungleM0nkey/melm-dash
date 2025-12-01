@@ -1,0 +1,19 @@
+{
+  "name": "melm-dash",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NixOS System Monitoring Dashboard",
+  "scripts": {
+    "dev": "pnpm --parallel run dev",
+    "build": "pnpm --filter @melm-dash/shared-types build && pnpm --parallel --filter !@melm-dash/shared-types run build",
+    "test": "pnpm --parallel run test",
+    "lint": "pnpm --parallel run lint",
+    "clean": "pnpm --parallel run clean",
+    "typecheck": "pnpm --parallel run typecheck"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
