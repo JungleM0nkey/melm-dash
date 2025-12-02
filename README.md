@@ -1,5 +1,3 @@
-# melm-dash
-
 <img src="melmlogo.png" alt="melm-dash logo" width="80">
 
 A real-time system monitoring dashboard for Linux systems. Features a modular, drag-and-drop interface where you can rearrange components to customize your layout. Displays CPU usage, memory consumption, network traffic, Docker container status, storage metrics, running services, open ports, and system information through a web interface.
