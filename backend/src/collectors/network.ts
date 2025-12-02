@@ -10,7 +10,7 @@ export async function collectNetwork(): Promise<NetworkMetrics> {
     si.networkInterfaces(),
   ]);
 
-  // Calculate total bandwidth from all interfaces
+  // Calculate total bandwidth from all interfaces (in bytes/sec)
   let totalDownload = 0;
   let totalUpload = 0;
 
@@ -19,9 +19,9 @@ export async function collectNetwork(): Promise<NetworkMetrics> {
     totalUpload += stat.tx_sec || 0;
   }
 
-  // Convert to Mbps
-  const downloadMbps = (totalDownload * 8) / (1024 * 1024);
-  const uploadMbps = (totalUpload * 8) / (1024 * 1024);
+  // Keep as bytes/sec for frontend formatting
+  const downloadBps = totalDownload;
+  const uploadBps = totalUpload;
 
   // Map interfaces
   const interfaces: NetworkInterface[] = (Array.isArray(netInterfaces) ? netInterfaces : [netInterfaces])
@@ -38,8 +38,8 @@ export async function collectNetwork(): Promise<NetworkMetrics> {
     }));
 
   return {
-    download: Math.round(downloadMbps * 10) / 10,
-    upload: Math.round(uploadMbps * 10) / 10,
+    download: downloadBps,
+    upload: uploadBps,
     interfaces,
   };
 }

@@ -1,0 +1,44 @@
+# =============================================================================
+# Development Dockerfile with Hot Reload Support
+# =============================================================================
+FROM node:22-alpine
+
+# Install pnpm and system utilities required for system monitoring
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+RUN apk add --no-cache iproute2 procps dumb-init
+
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY backend/package.json ./backend/
+COPY frontend/package.json ./frontend/
+COPY packages/shared-types/package.json ./packages/shared-types/
+
+# Install ALL dependencies (including devDependencies for hot reload)
+RUN pnpm install --frozen-lockfile
+
+# Create non-root user for security
+# Note: Docker socket access is handled via docker-compose group_add
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs && \
+    chown -R nodejs:nodejs /app
+
+USER nodejs
+
+# Source code will be mounted as volumes for hot reload
+# No need to COPY source here - docker-compose handles it
+
+# Environment defaults (can be overridden in docker-compose)
+ENV NODE_ENV=development \
+    HOST=0.0.0.0 \
+    PORT=3000
+
+# Expose ports for backend and frontend dev servers
+EXPOSE 3000 5173
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Run the development servers (backend + frontend in parallel)
+CMD ["pnpm", "dev"]

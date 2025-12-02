@@ -459,26 +459,149 @@ docker buildx build --platform linux/amd64,linux/arm64 -t melm-dash:latest .
 
 ### Development with Docker
 
-For development with hot reload:
+Full development environment with hot reload and separate dev/prod configurations.
 
-```yaml
-# docker-compose.dev.yml
-services:
-  melm-dash-dev:
-    build:
-      context: .
-      target: deps  # Stop at deps stage
-    volumes:
-      - ./backend/src:/app/backend/src
-      - ./frontend/src:/app/frontend/src
-    command: pnpm dev
-    ports:
-      - "3001:3001"
-      - "5173:5173"  # Vite dev server
-```
+#### Quick Start
 
 ```bash
-docker compose -f docker-compose.dev.yml up
+# Start development environment
+pnpm dev:docker
+
+# Or manually with Docker Compose
+docker compose -f docker-compose.dev.yml up --build
+
+# Stop development environment
+pnpm dev:docker:down
+```
+
+#### Architecture
+
+Development setup differs from production:
+
+| Aspect | Development | Production |
+|--------|-------------|------------|
+| **Ports** | Backend: 3000, Frontend: 5173 | Backend: 3001 |
+| **Build** | No build, live dev servers | Multi-stage optimized build |
+| **Dependencies** | All (including devDependencies) | Production only |
+| **Hot Reload** | ✅ Full hot reload (HMR) | ❌ Static files |
+| **Source Code** | Mounted as volumes | Copied during build |
+| **node_modules** | Named volumes (container) | Copied during build |
+
+#### Development Setup Details
+
+**Dockerfile.dev:**
+- Base: Node.js 22 Alpine
+- Installs: pnpm + system utilities
+- Includes: ALL dependencies (dev + prod)
+- Command: `pnpm dev` (runs parallel dev servers)
+
+**docker-compose.dev.yml:**
+- **Source Mounts**: Backend, frontend, packages directories mounted for instant code updates
+- **node_modules Isolation**: Uses named volumes to prevent host/container conflicts
+- **Environment**: NODE_ENV=development, faster polling intervals
+- **Ports Exposed**:
+  - `3000` → Backend Fastify server with hot reload
+  - `5173` → Frontend Vite dev server with HMR
+
+**Hot Reload Mechanism:**
+- **Backend**: `tsx watch` automatically restarts on file changes
+- **Frontend**: Vite HMR instantly updates browser on save
+- **Types**: Changes in `shared-types` trigger rebuilds in both
+
+#### Configuration
+
+Before starting, verify your Docker group ID:
+
+```bash
+getent group docker | cut -d: -f3
+```
+
+Update `docker-compose.dev.yml` line 73 if your GID differs from 109.
+
+#### Access Points
+
+- **Frontend Dev Server**: http://localhost:5173
+- **Backend API**: http://localhost:3000
+- **Health Check**: http://localhost:3000/health
+- **WebSocket**: ws://localhost:3000/ws
+
+#### Development Workflow
+
+```bash
+# 1. Start development environment
+pnpm dev:docker
+
+# 2. Make code changes in your editor
+# Changes are automatically detected and reload
+
+# 3. View logs (in another terminal)
+docker compose -f docker-compose.dev.yml logs -f
+
+# 4. Stop environment when done
+pnpm dev:docker:down
+```
+
+#### Volume Strategy
+
+**Bind Mounts** (source code):
+```yaml
+- ./backend:/app/backend       # Backend hot reload
+- ./frontend:/app/frontend     # Frontend hot reload
+- ./packages:/app/packages     # Shared types hot reload
+```
+
+**Named Volumes** (dependencies):
+```yaml
+- node_modules:/app/node_modules                           # Root
+- backend_node_modules:/app/backend/node_modules          # Backend
+- frontend_node_modules:/app/frontend/node_modules        # Frontend
+- shared_types_node_modules:/app/packages/shared-types/node_modules
+```
+
+**Why separate volumes?**
+- Prevents host/container architecture conflicts (e.g., macOS vs Linux binaries)
+- Ensures native modules like `systeminformation` work correctly
+- Faster performance (no cross-mount overhead)
+
+#### Troubleshooting Development
+
+**Hot reload not working:**
+```bash
+# Verify volumes are mounted
+docker exec melm-dash-dev ls -la /app/backend/src
+
+# Check file watching limits (Linux)
+echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+```
+
+**Port conflicts:**
+```bash
+# Check what's using ports 3000 or 5173
+sudo lsof -i :3000
+sudo lsof -i :5173
+
+# Or change ports in docker-compose.dev.yml
+ports:
+  - "3002:3000"  # Backend on host port 3002
+  - "5174:5173"  # Frontend on host port 5174
+```
+
+**Module not found errors:**
+```bash
+# Rebuild with clean volumes
+docker compose -f docker-compose.dev.yml down -v
+docker compose -f docker-compose.dev.yml up --build
+```
+
+**Slow performance:**
+```bash
+# Use Docker Desktop settings to allocate more resources
+# Recommended: 4 CPU cores, 8GB RAM for development
+
+# Or optimize file watching
+# Add to docker-compose.dev.yml environment:
+- CHOKIDAR_USEPOLLING=false  # Disable polling (faster)
 ```
 
 ---

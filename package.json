@@ -5,6 +5,8 @@
   "description": "NixOS System Monitoring Dashboard",
   "scripts": {
     "dev": "pnpm --parallel run dev",
+    "dev:docker": "docker compose -f docker-compose.dev.yml up --build",
+    "dev:docker:down": "docker compose -f docker-compose.dev.yml down",
     "build": "pnpm --filter @melm-dash/shared-types build && pnpm --parallel --filter !@melm-dash/shared-types run build",
     "test": "pnpm --parallel run test",
     "lint": "pnpm --parallel run lint",

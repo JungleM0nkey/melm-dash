@@ -1,0 +1,100 @@
+services:
+  melm-dash-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: melm-dash-dev
+    restart: unless-stopped
+
+    ports:
+      # Backend Fastify dev server
+      - "3000:3000"
+      # Frontend Vite dev server
+      - "5173:5173"
+
+    volumes:
+      # System monitoring access (read-only)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+
+      # Source code mounts for hot reload
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+      - ./packages:/app/packages
+      - ./package.json:/app/package.json
+      - ./pnpm-workspace.yaml:/app/pnpm-workspace.yaml
+      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml
+
+      # Named volumes for node_modules (prevents host/container conflicts)
+      # This ensures Linux binaries (like systeminformation native modules) work correctly
+      - node_modules:/app/node_modules
+      - backend_node_modules:/app/backend/node_modules
+      - frontend_node_modules:/app/frontend/node_modules
+      - shared_types_node_modules:/app/packages/shared-types/node_modules
+
+    environment:
+      # Development mode
+      - NODE_ENV=development
+
+      # Server configuration
+      - HOST=0.0.0.0
+      - PORT=3000
+      - LOG_LEVEL=debug
+
+      # Frontend Vite configuration
+      - VITE_WS_PORT=3000
+
+      # Collection intervals (faster for development)
+      - INTERVAL_CPU=2000
+      - INTERVAL_MEMORY=3000
+      - INTERVAL_NETWORK=2000
+      - INTERVAL_DOCKER=5000
+      - INTERVAL_STORAGE=30000
+      - INTERVAL_SERVICES=10000
+      - INTERVAL_PORTS=10000
+      - INTERVAL_SYSTEM=60000
+
+      # History configuration
+      - HISTORY_MAX_POINTS=300
+
+      # WebSocket configuration
+      - WS_MAX_PAYLOAD=1048576
+
+    # Security configuration (same as production)
+    security_opt:
+      - no-new-privileges:true
+    cap_add:
+      - SYS_PTRACE
+
+    # Grant docker socket access to non-root user
+    # Check your host's docker GID: getent group docker | cut -d: -f3
+    # Update this value to match your system
+    group_add:
+      - "109"  # docker group GID on host (update if needed)
+
+    # Development healthcheck (more frequent checks)
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Named volumes for node_modules
+volumes:
+  node_modules:
+  backend_node_modules:
+  frontend_node_modules:
+  shared_types_node_modules:
+
+networks:
+  default:
+    name: melm-network-dev

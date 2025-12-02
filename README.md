@@ -1,4 +1,4 @@
-<img src="melmlogo.png" alt="melm-dash logo" width="80">
+<img src="melmlogo.png" alt="melm-dash logo" width="200">
 
 A real-time system monitoring dashboard for Linux systems. Features a modular, drag-and-drop interface where you can rearrange components to customize your layout. Displays CPU usage, memory consumption, network traffic, Docker container status, storage metrics, running services, open ports, and system information through a web interface.
 
@@ -51,6 +51,42 @@ docker compose up -d
 Open your browser to `http://localhost:3001`
 
 The health endpoint is available at `http://localhost:3001/health`
+
+## Local Development
+
+### Native Development (without Docker)
+
+Requires Node.js 18+ and pnpm 8+:
+
+```bash
+# Install dependencies
+pnpm install
+
+# Run development servers (backend + frontend with hot reload)
+pnpm dev
+```
+
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3001
+- WebSocket: ws://localhost:3001/ws
+
+### Docker Development (with hot reload)
+
+For a containerized development environment with hot reload:
+
+```bash
+# Start development container
+pnpm dev:docker
+
+# Stop development container
+pnpm dev:docker:down
+```
+
+- Frontend: http://localhost:5173 (Vite dev server with HMR)
+- Backend API: http://localhost:3000 (Fastify with auto-restart)
+- WebSocket: ws://localhost:3000/ws
+
+See [Docker Development Guide](docs/DOCKER.md#development-with-docker) for details on the development setup, volume mounting, and troubleshooting.
 
 ## Build Process
 

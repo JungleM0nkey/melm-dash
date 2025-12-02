@@ -12,8 +12,12 @@ melm-dash is a real-time Linux system monitoring dashboard with a React frontend
 # Install dependencies (pnpm required)
 pnpm install
 
-# Development (runs backend and frontend concurrently)
+# Development - Native (runs backend and frontend concurrently)
 pnpm dev
+
+# Development - Docker with hot reload
+pnpm dev:docker         # Start development container
+pnpm dev:docker:down    # Stop development container
 
 # Build all packages (shared-types must build first)
 pnpm build
@@ -37,9 +41,13 @@ pnpm --filter @melm-dash/backend test:watch
 # Run tests with coverage
 pnpm --filter @melm-dash/backend test:coverage
 
-# Docker deployment
+# Docker production deployment
 docker compose build
 docker compose up -d
+
+# Docker development deployment (alternative to pnpm dev:docker)
+docker compose -f docker-compose.dev.yml up --build
+docker compose -f docker-compose.dev.yml down
 ```
 
 ## Architecture

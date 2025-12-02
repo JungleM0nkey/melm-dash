@@ -49,7 +49,7 @@ export function SystemResourcesPanel() {
         </Box>
         {cpu && (
           <Text fontSize="xs" color="fg.muted" mt={1}>
-            {cpu.model} • {cpu.cores} cores @ {cpu.speed.toFixed(2)} GHz
+            {cpu.model} • {cpu.cores} cores{cpu.speed > 0 ? ` @ ${cpu.speed.toFixed(2)} GHz` : ''}
           </Text>
         )}
       </Box>
@@ -82,15 +82,15 @@ export function SystemResourcesPanel() {
           <SimpleGrid columns={3} spacing={2} mt={2}>
             <Stat size="sm">
               <StatLabel fontSize="xs" color="fg.muted">Used</StatLabel>
-              <StatNumber fontSize="sm">{formatBytes(memory.used)}</StatNumber>
+              <StatNumber fontSize="sm">{memory.used.toFixed(1)} GB</StatNumber>
             </Stat>
             <Stat size="sm">
               <StatLabel fontSize="xs" color="fg.muted">Available</StatLabel>
-              <StatNumber fontSize="sm">{formatBytes(memory.available)}</StatNumber>
+              <StatNumber fontSize="sm">{memory.available.toFixed(1)} GB</StatNumber>
             </Stat>
             <Stat size="sm">
               <StatLabel fontSize="xs" color="fg.muted">Total</StatLabel>
-              <StatNumber fontSize="sm">{formatBytes(memory.total)}</StatNumber>
+              <StatNumber fontSize="sm">{memory.total.toFixed(1)} GB</StatNumber>
             </Stat>
           </SimpleGrid>
         )}
