@@ -12,8 +12,13 @@ import {
 } from '@chakra-ui/react';
 import { RotateCcw, Settings } from 'lucide-react';
 import { useConnectionStatus, useSystemInfo } from '../../context/DashboardContext';
-import melmLogo from '../../assets/melmlogo.png';
-import { useLogoPreference } from '../../hooks/useLogoPreference';
+import {
+  useLogoPreference,
+  useLogoSize,
+  useCustomLogo,
+  LOGO_SIZE_VALUES,
+} from '../../hooks/useLogoPreference';
+import type { LogoType, LogoSize } from '../../hooks/useLogoPreference';
 import { SettingsModal } from '../modals/SettingsModal';
 import { DistroIcon } from '../panels/DistroIcon';
 
@@ -25,6 +30,8 @@ export function DashboardHeader({ onResetLayout }: DashboardHeaderProps) {
   const connectionStatus = useConnectionStatus();
   const systemInfo = useSystemInfo();
   const [logoPreference, setLogoPreference] = useLogoPreference();
+  const [logoSize, setLogoSize] = useLogoSize();
+  const [customLogo, setCustomLogo] = useCustomLogo();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const statusColor = {
@@ -38,6 +45,18 @@ export function DashboardHeader({ onResetLayout }: DashboardHeaderProps) {
     disconnected: 'Disconnected',
     reconnecting: 'Reconnecting...',
   }[connectionStatus];
+
+  const handleSettingsSave = (logo: LogoType, size: LogoSize, customLogoData: string | null) => {
+    setLogoPreference(logo);
+    setLogoSize(size);
+    setCustomLogo(customLogoData);
+  };
+
+  const logoSizePixels = LOGO_SIZE_VALUES[logoSize];
+  // MELM logo container is wider to accommodate its aspect ratio
+  const isMelm = logoPreference === 'melm';
+  const containerWidth = isMelm ? `${logoSizePixels * 2 + 8}px` : `${logoSizePixels + 8}px`;
+  const containerHeight = `${logoSizePixels + 8}px`;
 
   return (
     <Box
@@ -53,25 +72,25 @@ export function DashboardHeader({ onResetLayout }: DashboardHeaderProps) {
     >
       <Flex justify="space-between" align="center">
         <HStack spacing={4}>
-          {/* Logo - melm logo is larger for better visibility */}
+          {/* Logo - size controlled by user preference, MELM is wider */}
           <Box
-            w={logoPreference === 'melm' ? 12 : 10}
-            h={logoPreference === 'melm' ? 12 : 10}
+            w={containerWidth}
+            h={containerHeight}
             display="flex"
             alignItems="center"
             justifyContent="center"
           >
-            {logoPreference === 'melm' ? (
+            {logoPreference === 'custom' && customLogo ? (
               <Image
-                src={melmLogo}
-                alt="MELM Dashboard Logo"
-                w={12}
-                h={12}
+                src={customLogo}
+                alt="Custom Logo"
+                w={`${logoSizePixels}px`}
+                h={`${logoSizePixels}px`}
                 objectFit="contain"
                 borderRadius="lg"
               />
             ) : (
-              <DistroIcon distro={logoPreference} size={40} />
+              <DistroIcon distro={logoPreference} size={logoSizePixels} />
             )}
           </Box>
 
@@ -149,7 +168,9 @@ export function DashboardHeader({ onResetLayout }: DashboardHeaderProps) {
         isOpen={isOpen}
         onClose={onClose}
         currentLogo={logoPreference}
-        onSave={setLogoPreference}
+        currentSize={logoSize}
+        currentCustomLogo={customLogo}
+        onSave={handleSettingsSave}
       />
     </Box>
   );
