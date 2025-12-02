@@ -7,13 +7,15 @@ class MockWebSocket {
   static OPEN = 1;
   static CLOSED = 3;
 
+  url: string;
   readyState = MockWebSocket.CLOSED;
   onopen: (() => void) | null = null;
   onclose: ((event: { code: number; reason: string }) => void) | null = null;
   onmessage: ((event: { data: string }) => void) | null = null;
   onerror: ((error: Error) => void) | null = null;
 
-  constructor(public url: string) {
+  constructor(url: string) {
+    this.url = url;
     // Simulate async connection
     Promise.resolve().then(() => {
       this.readyState = MockWebSocket.OPEN;
@@ -32,13 +34,13 @@ describe('WebSocketClient', () => {
   let originalWebSocket: typeof WebSocket;
 
   beforeEach(() => {
-    originalWebSocket = global.WebSocket;
-    global.WebSocket = MockWebSocket as unknown as typeof WebSocket;
+    originalWebSocket = window.WebSocket;
+    window.WebSocket = MockWebSocket as unknown as typeof WebSocket;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    global.WebSocket = originalWebSocket;
+    window.WebSocket = originalWebSocket;
   });
 
   it('should create a client with correct URL', () => {

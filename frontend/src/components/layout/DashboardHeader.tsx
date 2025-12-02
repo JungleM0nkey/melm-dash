@@ -8,10 +8,14 @@ import {
   IconButton,
   Tooltip,
   Image,
+  useDisclosure,
 } from '@chakra-ui/react';
 import { RotateCcw, Settings } from 'lucide-react';
 import { useConnectionStatus, useSystemInfo } from '../../context/DashboardContext';
 import melmLogo from '../../assets/melmlogo.png';
+import { useLogoPreference } from '../../hooks/useLogoPreference';
+import { SettingsModal } from '../modals/SettingsModal';
+import { DistroIcon } from '../panels/DistroIcon';
 
 interface DashboardHeaderProps {
   onResetLayout: () => void;
@@ -20,6 +24,8 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ onResetLayout }: DashboardHeaderProps) {
   const connectionStatus = useConnectionStatus();
   const systemInfo = useSystemInfo();
+  const [logoPreference, setLogoPreference] = useLogoPreference();
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   const statusColor = {
     connected: 'green',
@@ -47,15 +53,27 @@ export function DashboardHeader({ onResetLayout }: DashboardHeaderProps) {
     >
       <Flex justify="space-between" align="center">
         <HStack spacing={4}>
-          {/* Logo */}
-          <Image
-            src={melmLogo}
-            alt="Melm Dashboard Logo"
-            w={10}
-            h={10}
-            objectFit="contain"
-            borderRadius="lg"
-          />
+          {/* Logo - melm logo is larger for better visibility */}
+          <Box
+            w={logoPreference === 'melm' ? 12 : 10}
+            h={logoPreference === 'melm' ? 12 : 10}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            {logoPreference === 'melm' ? (
+              <Image
+                src={melmLogo}
+                alt="MELM Dashboard Logo"
+                w={12}
+                h={12}
+                objectFit="contain"
+                borderRadius="lg"
+              />
+            ) : (
+              <DistroIcon distro={logoPreference} size={40} />
+            )}
+          </Box>
 
           {/* Title */}
           <Box>
@@ -117,6 +135,7 @@ export function DashboardHeader({ onResetLayout }: DashboardHeaderProps) {
                 size="sm"
                 variant="ghost"
                 colorScheme="gray"
+                onClick={onOpen}
               >
                 <Settings size={16} />
               </IconButton>
@@ -124,6 +143,14 @@ export function DashboardHeader({ onResetLayout }: DashboardHeaderProps) {
           </HStack>
         </HStack>
       </Flex>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isOpen}
+        onClose={onClose}
+        currentLogo={logoPreference}
+        onSave={setLogoPreference}
+      />
     </Box>
   );
 }

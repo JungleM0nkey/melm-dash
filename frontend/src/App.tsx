@@ -1,5 +1,5 @@
 import { ChakraProvider, ColorModeScript, Box, Heading, Text, Button, VStack } from '@chakra-ui/react';
-import { theme } from './theme';
+import theme from './theme';
 import { DashboardProvider } from './context/DashboardContext';
 import { DashboardLayout } from './components/layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -19,7 +19,7 @@ function AppErrorFallback() {
       justifyContent="center"
       p={8}
     >
-      <VStack gap={6} maxW="lg" textAlign="center">
+      <VStack spacing={6} maxW="lg" textAlign="center">
         <Heading color="red.400" size="xl">
           Application Error
         </Heading>
@@ -36,12 +36,14 @@ function AppErrorFallback() {
 }
 
 function App() {
+  const wsPort = Number(import.meta.env.VITE_WS_PORT) || 3001;
+
   return (
     <>
       <ColorModeScript initialColorMode={theme.config.initialColorMode} />
       <ChakraProvider theme={theme}>
         <ErrorBoundary fallback={<AppErrorFallback />}>
-          <DashboardProvider port={3001}>
+          <DashboardProvider port={wsPort}>
             <DashboardLayout />
           </DashboardProvider>
         </ErrorBoundary>

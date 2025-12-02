@@ -163,13 +163,16 @@ export function DashboardLayout() {
           isResizable={true}
           isDraggable={true}
         >
-          {panels.map((panel) => (
-            <Box key={panel.id}>
-              <PanelWrapper title={panel.title}>
-                <panel.component />
-              </PanelWrapper>
-            </Box>
-          ))}
+          {panels.map((panel) => {
+            const Component = panel.component;
+            return (
+              <Box key={panel.id}>
+                <PanelWrapper title={panel.title}>
+                  <Component />
+                </PanelWrapper>
+              </Box>
+            );
+          })}
         </ResponsiveGridLayout>
       </Box>
     </Flex>

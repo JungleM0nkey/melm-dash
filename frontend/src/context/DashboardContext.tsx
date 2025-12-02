@@ -187,7 +187,7 @@ interface DashboardProviderProps {
 export function DashboardProvider({
   children,
   host,
-  port = 3001,
+  port = Number(import.meta.env.VITE_WS_PORT) || 3001,
 }: DashboardProviderProps) {
   const [state, dispatch] = useReducer(dashboardReducer, initialState);
   const wsClientRef = useRef<WebSocketClient | null>(null);
@@ -290,9 +290,16 @@ export function DashboardProvider({
     };
   }, []); // Empty deps - only run on mount/unmount
 
-  // Reconnect when host/port changes
+  // Track if this is the initial mount to skip the host/port effect
+  const isInitialMountRef = useRef(true);
+
+  // Reconnect when host/port changes (but not on initial mount)
   useEffect(() => {
-    // Skip on initial mount (handled by main effect)
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
+    // Only reconnect if already connected and props actually changed
     if (wsClientRef.current && mountedRef.current) {
       connect();
     }

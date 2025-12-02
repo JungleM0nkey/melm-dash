@@ -41,11 +41,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         <Box
           p={6}
           borderRadius="lg"
-          bg="red.900/20"
+          bg="rgba(127, 29, 29, 0.2)"
           border="1px solid"
-          borderColor="red.500/30"
+          borderColor="rgba(239, 68, 68, 0.3)"
         >
-          <VStack gap={4} align="start">
+          <VStack spacing={4} align="start">
             <Heading size="md" color="red.300">
               Something went wrong
             </Heading>
@@ -106,10 +106,10 @@ export class WidgetErrorBoundary extends Component<WidgetErrorBoundaryProps, Wid
           display="flex"
           alignItems="center"
           justifyContent="center"
-          bg="red.900/10"
+          bg="rgba(127, 29, 29, 0.1)"
           borderRadius="md"
         >
-          <VStack gap={2}>
+          <VStack spacing={2}>
             <Text color="red.300" fontSize="sm">
               Failed to load {this.props.widgetName}
             </Text>

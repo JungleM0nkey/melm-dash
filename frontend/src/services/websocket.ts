@@ -117,14 +117,12 @@ export class WebSocketClient {
     if (!this.ws) return;
 
     this.ws.onopen = () => {
-      console.log('WebSocket connected');
       this.reconnectAttempts = 0;
       this.setStatus('connected');
       this.startPing();
     };
 
-    this.ws.onclose = (event) => {
-      console.log('WebSocket closed:', event.code, event.reason);
+    this.ws.onclose = () => {
       this.stopPing();
       this.scheduleReconnect();
     };
@@ -168,7 +166,6 @@ export class WebSocketClient {
 
     // Check max attempts (0 = infinite retries)
     if (this.maxReconnectAttempts > 0 && this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('Max reconnection attempts reached. Call reconnect() to retry.');
       this.setStatus('disconnected');
       return;
     }
@@ -182,7 +179,6 @@ export class WebSocketClient {
       this.reconnectInterval,
       this.maxReconnectDelay
     );
-    console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
 
     this.reconnectTimeout = setTimeout(() => {
       this.connect();
@@ -246,7 +242,7 @@ export class WebSocketClient {
 // Factory function for creating WebSocket client
 export function createWebSocketClient(
   host: string = window.location.hostname,
-  port: number = 3001,
+  port: number = Number(import.meta.env.VITE_WS_PORT) || 3001,
   onStatusChange?: (status: ConnectionStatus) => void
 ): WebSocketClient {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

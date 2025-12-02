@@ -82,6 +82,10 @@ export interface SystemInfo {
   location: string;
   timezone: string;
   currentTime: string;
+  distro?: string;           // Distribution ID (ubuntu, debian, arch, etc.)
+  distroName?: string;       // Display name (Ubuntu, Debian, Arch Linux, etc.)
+  inContainer?: boolean;     // Running in container
+  containerType?: string;    // Container type (docker, podman, lxc, etc.)
 }
 
 // =============================================================================

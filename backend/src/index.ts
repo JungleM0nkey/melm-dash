@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
+import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { config } from './config.js';
 import { scheduler } from './services/scheduler.js';
@@ -39,13 +40,18 @@ async function main() {
   // Rate limiting for API endpoints
   await fastify.register(rateLimit, getRateLimitConfig());
 
-  // Static file serving for frontend (production)
+  // Static file serving for frontend (production only)
   const frontendDistPath = path.join(__dirname, '../frontend-dist');
-  await fastify.register(fastifyStatic, {
-    root: frontendDistPath,
-    prefix: '/',
-    decorateReply: false,
-  });
+  const isDevelopment = config.env.nodeEnv === 'development';
+  const hasFrontendDist = existsSync(frontendDistPath);
+
+  if (hasFrontendDist) {
+    await fastify.register(fastifyStatic, {
+      root: frontendDistPath,
+      prefix: '/',
+      decorateReply: true,
+    });
+  }
 
   // WebSocket support
   await fastify.register(websocket, {
@@ -58,13 +64,26 @@ async function main() {
   await fastify.register(apiRoutes);
   await fastify.register(wsRoutes);
 
-  // SPA fallback - serve index.html for non-API routes
-  fastify.setNotFoundHandler((request, reply) => {
-    if (!request.url.startsWith('/api') && !request.url.startsWith('/ws')) {
-      return reply.sendFile('index.html');
-    }
-    reply.status(404).send({ error: 'Not Found' });
-  });
+  // SPA fallback - serve index.html for non-API routes (production only)
+  if (hasFrontendDist) {
+    fastify.setNotFoundHandler((request, reply) => {
+      if (!request.url.startsWith('/api') && !request.url.startsWith('/ws')) {
+        return reply.sendFile('index.html');
+      }
+      reply.status(404).send({ error: 'Not Found' });
+    });
+  } else if (isDevelopment) {
+    // Development mode: provide helpful info at root
+    fastify.get('/', async () => ({
+      message: 'melm-dash backend running in development mode',
+      frontend: 'Access the dashboard at http://localhost:5173',
+      endpoints: {
+        health: '/health',
+        api: '/api/*',
+        websocket: '/ws',
+      },
+    }));
+  }
 
   // Graceful shutdown
   let isShuttingDown = false;

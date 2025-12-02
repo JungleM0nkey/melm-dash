@@ -5,9 +5,11 @@ import {
   HStack,
   Text,
   Divider,
+  Badge,
 } from '@chakra-ui/react';
-import { Info, Clock, Calendar } from 'lucide-react';
+import { Info, Clock, Calendar, Container, type LucideIcon } from 'lucide-react';
 import { useSystemInfo } from '../../context/DashboardContext';
+import { DistroIcon } from './DistroIcon';
 
 function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400);
@@ -24,17 +26,37 @@ function formatUptime(seconds: number): string {
 
 interface InfoRowProps {
   label: string;
-  value: string | number | undefined;
-  icon?: React.ComponentType<{ size?: number }>;
+  value: string | number | undefined | React.ReactNode;
+  icon?: LucideIcon | React.ReactNode;
 }
 
-function InfoRow({ label, value, icon: Icon }: InfoRowProps) {
+// Check if value is a React component (including forwardRef components)
+function isReactComponent(value: unknown): value is LucideIcon {
+  if (typeof value === 'function') return true;
+  // forwardRef components are objects with $$typeof and render properties
+  if (typeof value === 'object' && value !== null && '$$typeof' in value && 'render' in value) {
+    return true;
+  }
+  return false;
+}
+
+function InfoRow({ label, value, icon }: InfoRowProps) {
+  // Check if icon is a component (function or forwardRef) vs already-rendered ReactNode
+  const isComponent = icon && isReactComponent(icon);
+  const IconComponent = isComponent ? (icon as LucideIcon) : null;
+  const iconNode = !isComponent && icon ? icon : null;
+
   return (
     <HStack justify="space-between" py={1}>
       <HStack spacing={2}>
-        {Icon && (
+        {IconComponent && (
           <Box color="fg.muted">
-            <Icon size={12} />
+            <IconComponent size={12} />
+          </Box>
+        )}
+        {iconNode && (
+          <Box color="fg.muted">
+            {iconNode}
           </Box>
         )}
         <Text fontSize="sm" color="fg.muted">
@@ -67,7 +89,22 @@ export function SystemInfoPanel() {
           System
         </Text>
         <InfoRow label="Hostname" value={system.hostname} icon={Info} />
-        <InfoRow label="OS" value={system.os} />
+        <InfoRow
+          label="OS"
+          value={system.os}
+          icon={<DistroIcon distro={system.distro} />}
+        />
+        {system.inContainer && (
+          <InfoRow
+            label="Container"
+            value={
+              <Badge colorScheme="purple" fontSize="xs">
+                {system.containerType || 'Container'}
+              </Badge>
+            }
+            icon={Container}
+          />
+        )}
         <InfoRow label="Kernel" value={system.kernel} />
         <InfoRow label="Packages" value={system.packages} />
       </Box>

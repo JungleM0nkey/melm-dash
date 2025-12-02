@@ -2,10 +2,13 @@
 
 ![melm-dash logo](melmlogo.png)
 
-A real-time system monitoring dashboard for Linux systems. Displays CPU usage, memory consumption, network traffic, Docker container status, storage metrics, running services, open ports, and system information through a web interface.
+A real-time system monitoring dashboard for Linux systems. Features a modular, drag-and-drop interface where you can rearrange components to customize your layout. Displays CPU usage, memory consumption, network traffic, Docker container status, storage metrics, running services, open ports, and system information through a web interface.
+
+![melm-dash screenshot](screenshot.jpeg)
 
 ## What It Does
 
+- **Modular drag-and-drop interface** - Rearrange and customize component layout to your preferences
 - Monitors system resources (CPU, memory, network, storage) in real-time
 - Tracks Docker container status and resource usage
 - Lists active systemd services and their states
@@ -79,6 +82,10 @@ Environment variables can be set in [docker-compose.yml](docker-compose.yml:18):
 
 
 Backend uses [systeminformation](https://www.npmjs.com/package/systeminformation) library to collect system metrics. Frontend connects via WebSocket to receive real-time updates.
+
+## Documentation
+
+- [Docker Build and Deployment Guide](docs/DOCKER.md) - Complete guide for building, configuring, and deploying with Docker
 
 ## License
 

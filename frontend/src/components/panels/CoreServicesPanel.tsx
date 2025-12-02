@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Box,
   VStack,
@@ -6,7 +5,7 @@ import {
   Text,
   Badge,
 } from '@chakra-ui/react';
-import { CheckCircle, XCircle, AlertTriangle, HelpCircle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, HelpCircle, type LucideIcon } from 'lucide-react';
 import { useServices } from '../../context/DashboardContext';
 
 function formatUptime(seconds?: number): string {
@@ -20,11 +19,12 @@ function formatUptime(seconds?: number): string {
   return `${minutes}m`;
 }
 
-const statusConfig: Record<string, { color: string; Icon: React.ComponentType<{ size?: number }> }> = {
-  running: { color: 'green', Icon: CheckCircle },
-  stopped: { color: 'red', Icon: XCircle },
-  failed: { color: 'red', Icon: AlertTriangle },
-  unknown: { color: 'gray', Icon: HelpCircle },
+// Store the icon mapping without the Icon suffix to avoid React 19 confusion
+const statusConfig: Record<string, { color: string; icon: LucideIcon }> = {
+  running: { color: 'green', icon: CheckCircle },
+  stopped: { color: 'red', icon: XCircle },
+  failed: { color: 'red', icon: AlertTriangle },
+  unknown: { color: 'gray', icon: HelpCircle },
 };
 
 export function CoreServicesPanel() {
@@ -42,7 +42,8 @@ export function CoreServicesPanel() {
     <VStack spacing={2} align="stretch">
       {services.map((service, index) => {
         const config = statusConfig[service.status] || statusConfig.unknown;
-        const IconComponent = config.Icon;
+        // Extract component and capitalize for React 19 compatibility
+        const StatusIcon = config.icon;
         return (
           <HStack
             key={`${service.name}-${index}`}
@@ -54,7 +55,7 @@ export function CoreServicesPanel() {
           >
             <HStack spacing={2}>
               <Box color={`${config.color}.400`}>
-                <IconComponent size={16} />
+                <StatusIcon size={16} />
               </Box>
               <Text fontSize="sm" fontWeight="medium">
                 {service.name}
