@@ -25,18 +25,19 @@ export function DistroIcon({ distro, size = 12 }: DistroIconProps) {
 
   const normalizedDistro = distro?.toLowerCase();
 
-  // Special handling for MELM logo (PNG)
+  // Special handling for MELM logo (PNG) - wider aspect ratio (2:1)
   if (normalizedDistro === 'melm') {
     return (
       <Box
         as="img"
         src={melmLogo}
         alt="MELM Logo"
-        width={`${size}px`}
+        width={`${size * 2}px`}
         height={`${size}px`}
         display="inline-block"
         verticalAlign="middle"
         borderRadius="md"
+        objectFit="contain"
       />
     );
   }
