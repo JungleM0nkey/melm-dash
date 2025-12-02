@@ -56,19 +56,78 @@ The health endpoint is available at `http://localhost:3001/health`
 
 ### Native Development (without Docker)
 
-Requires Node.js 18+ and pnpm 8+:
+#### Prerequisites
+
+- **Node.js**: 18.0.0 or higher
+- **pnpm**: 8.0.0 or higher (required package manager)
+- **Linux**: Requires access to `/proc`, `/sys` for system metrics
+- **Docker socket** (optional): For Docker container monitoring
+
+Verify your installation:
+```bash
+node --version   # Should show v18.x.x or higher
+pnpm --version   # Should show 8.x.x or higher
+```
+
+#### Quick Start
 
 ```bash
-# Install dependencies
+# 1. Install all dependencies
 pnpm install
 
-# Run development servers (backend + frontend with hot reload)
+# 2. Run development servers (backend + frontend with hot reload)
 pnpm dev
 ```
 
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3001
-- WebSocket: ws://localhost:3001/ws
+Access points:
+- **Frontend Dashboard**: http://localhost:5173
+- **Backend API**: http://localhost:3001
+- **WebSocket**: ws://localhost:3001/ws
+- **Health Check**: http://localhost:3001/health
+
+#### Environment Configuration (Optional)
+
+Create a `.env` file in the project root to customize settings:
+
+```bash
+cp .env.example .env
+```
+
+Key environment variables:
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HOST` | `0.0.0.0` | Server bind address |
+| `PORT` | `3001` | Backend server port |
+| `LOG_LEVEL` | `info` | Logging level (trace/debug/info/warn/error) |
+| `INTERVAL_CPU` | `2000` | CPU metrics interval (ms) |
+| `INTERVAL_MEMORY` | `3000` | Memory metrics interval (ms) |
+| `INTERVAL_DOCKER` | `5000` | Docker stats interval (ms) |
+| `HISTORY_MAX_POINTS` | `300` | Data points kept in history |
+
+#### Production Build
+
+```bash
+# Build all packages (shared-types → backend → frontend)
+pnpm build
+
+# Start production server
+pnpm --filter @melm-dash/backend start
+```
+
+The production server serves both the API and the built frontend on port 3001.
+
+#### Available Commands
+
+```bash
+pnpm dev          # Development mode with hot reload
+pnpm build        # Build all packages for production
+pnpm test         # Run all tests
+pnpm lint         # Run linter
+pnpm typecheck    # TypeScript type checking
+pnpm clean        # Remove build artifacts
+```
+
+See [Native Development Guide](docs/NATIVE.md) for detailed documentation including troubleshooting, architecture overview, and advanced configuration.
 
 ### Docker Development (with hot reload)
 
@@ -119,6 +178,7 @@ Backend uses [systeminformation](https://www.npmjs.com/package/systeminformation
 
 ## Documentation
 
+- [Native Development Guide](docs/NATIVE.md) - Running without Docker, prerequisites, configuration, and troubleshooting
 - [Docker Build and Deployment Guide](docs/DOCKER.md) - Complete guide for building, configuring, and deploying with Docker
 
 ## License
