@@ -1,8 +1,24 @@
-<img src="melmlogo.png" alt="melm-dash logo" width="200">
+<div align="center">
+  <img src="melmlogo.png" alt="MELM Dash" width="300">
 
-A real-time system monitoring dashboard for Linux with a modular drag-and-drop interface. Monitor CPU, memory, network, Docker containers, storage, systemd services, and open ports through a responsive web interface.
+---
 
-![melm-dash screenshot](screenshot.jpeg)
+  **Real-time Linux System Monitoring Dashboard**
+
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+  [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+
+  A modular drag-and-drop dashboard for monitoring CPU, memory, network, Docker containers, storage, systemd services, and open ports through a responsive web interface.
+
+</div>
+
+---
+
+<div align="center">
+  <img src="screenshot.jpeg" alt="MELM Dash Screenshot" width="800">
+</div>
 
 ## Features
 
