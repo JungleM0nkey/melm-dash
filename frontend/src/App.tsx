@@ -1,6 +1,7 @@
 import { ChakraProvider, ColorModeScript, Box, Heading, Text, Button, VStack } from '@chakra-ui/react';
 import theme from './theme';
 import { DashboardProvider } from './context/DashboardContext';
+import { PanelManagementProvider } from './context/PanelManagementContext';
 import { DashboardLayout } from './components/layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -43,9 +44,11 @@ function App() {
       <ColorModeScript initialColorMode={theme.config.initialColorMode} />
       <ChakraProvider theme={theme}>
         <ErrorBoundary fallback={<AppErrorFallback />}>
-          <DashboardProvider port={wsPort}>
-            <DashboardLayout />
-          </DashboardProvider>
+          <PanelManagementProvider>
+            <DashboardProvider port={wsPort}>
+              <DashboardLayout />
+            </DashboardProvider>
+          </PanelManagementProvider>
         </ErrorBoundary>
       </ChakraProvider>
     </>

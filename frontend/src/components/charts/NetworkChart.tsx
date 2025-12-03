@@ -10,19 +10,11 @@ import {
 import { Box, Text } from '@chakra-ui/react';
 import type { TimeSeriesPoint } from '@melm-dash/shared-types';
 import { useInterpolatedData } from '../../hooks/useInterpolatedData';
-import { chartAnimationConfig } from '../../config/animation';
+import { formatSpeed } from '../../utils/formatters';
 
 interface NetworkChartProps {
   data: TimeSeriesPoint<{ download: number; upload: number }>[];
   height?: number;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B/s';
-  const k = 1024;
-  const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 function formatTime(timestamp: number): string {
@@ -55,7 +47,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
       </Text>
       {payload.map((entry) => (
         <Text key={entry.dataKey} fontSize="sm" color={entry.dataKey === 'download' ? 'chart.download' : 'chart.upload'}>
-          {entry.dataKey === 'download' ? '↓' : '↑'} {formatBytes(entry.value)}
+          {entry.dataKey === 'download' ? '↓' : '↑'} {formatSpeed(entry.value)}
         </Text>
       ))}
     </Box>
@@ -105,7 +97,7 @@ export function NetworkChart({ data, height = 100 }: NetworkChartProps) {
           interval="preserveStartEnd"
         />
         <YAxis
-          tickFormatter={formatBytes}
+          tickFormatter={formatSpeed}
           tick={{ fontSize: 10, fill: '#a0a0a0' }}
           axisLine={false}
           tickLine={false}
@@ -119,9 +111,7 @@ export function NetworkChart({ data, height = 100 }: NetworkChartProps) {
           stroke="#4299E1"
           strokeWidth={2}
           fill="url(#gradient-download)"
-          isAnimationActive={true}
-          animationDuration={chartAnimationConfig.duration}
-          animationEasing={chartAnimationConfig.easing}
+          isAnimationActive={false}
         />
         <Area
           type="monotone"
@@ -129,9 +119,7 @@ export function NetworkChart({ data, height = 100 }: NetworkChartProps) {
           stroke="#48BB78"
           strokeWidth={2}
           fill="url(#gradient-upload)"
-          isAnimationActive={true}
-          animationDuration={chartAnimationConfig.duration}
-          animationEasing={chartAnimationConfig.easing}
+          isAnimationActive={false}
         />
       </AreaChart>
     </ResponsiveContainer>

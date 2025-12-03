@@ -12,11 +12,6 @@ import {
 import { useCpu, useMemory } from '../../context/DashboardContext';
 import { AreaSparkline } from '../charts/AreaSparkline';
 
-function formatBytes(bytes: number): string {
-  const gb = bytes / (1024 * 1024 * 1024);
-  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
-}
-
 export function SystemResourcesPanel() {
   const { cpu, history: cpuHistory } = useCpu();
   const { memory, history: memoryHistory } = useMemory();

@@ -25,6 +25,36 @@ body {
   color: #f5f5f5;
 }
 
+/* Dashboard grid background pattern */
+.dashboard-grid-area {
+  position: relative;
+}
+
+.dashboard-grid-area::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(45, 45, 45, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45, 45, 45, 0.15) 1px, transparent 1px);
+  background-size: 66px 66px; /* 50px row height + 16px margin */
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Enhanced grid visibility during drag */
+.dashboard-grid-area.is-dragging::before {
+  background-image:
+    linear-gradient(rgba(128, 90, 213, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(128, 90, 213, 0.12) 1px, transparent 1px);
+}
+
+/* Ensure grid items are above the background */
+.dashboard-grid-area .react-grid-layout {
+  position: relative;
+  z-index: 1;
+}
+
 /* React Grid Layout styles */
 .react-grid-layout {
   position: relative;

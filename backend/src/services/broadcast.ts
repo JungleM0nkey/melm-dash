@@ -57,7 +57,12 @@ export class BroadcastManager {
     };
 
     if (socket.readyState === 1) {
-      socket.send(JSON.stringify(message));
+      try {
+        socket.send(JSON.stringify(message));
+      } catch (error) {
+        console.error('Error sending to client:', error);
+        this.clients.delete(socket);
+      }
     }
   }
 }

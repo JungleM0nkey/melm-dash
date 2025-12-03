@@ -7,7 +7,6 @@ import {
 } from 'recharts';
 import type { TimeSeriesPoint } from '@melm-dash/shared-types';
 import { useInterpolatedData } from '../../hooks/useInterpolatedData';
-import { chartAnimationConfig } from '../../config/animation';
 
 interface AreaSparklineProps {
   data: TimeSeriesPoint<number>[];
@@ -51,9 +50,7 @@ export function AreaSparkline({
           stroke={color}
           strokeWidth={2}
           fill={`url(#gradient-${color.replace('#', '')})`}
-          isAnimationActive={true}
-          animationDuration={chartAnimationConfig.duration}
-          animationEasing={chartAnimationConfig.easing}
+          isAnimationActive={false}
         />
       </AreaChart>
     </ResponsiveContainer>

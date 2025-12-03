@@ -6,7 +6,17 @@
       "Bash(pnpm --filter @melm-dash/frontend typecheck:*)",
       "Bash(pnpm --filter @melm-dash/frontend lint:*)",
       "Bash(pnpm --filter @melm-dash/frontend test)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(pnpm --filter @melm-dash/frontend add:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm install)",
+      "Bash(pnpm install:*)",
+      "Bash(NODE_ENV=development pnpm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm --filter @melm-dash/backend test)"
     ],
     "deny": [],
     "ask": []

@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { chartAnimationConfig } from '../config/animation';
 
 export interface UseInterpolatedDataOptions {
@@ -11,6 +11,45 @@ export interface UseInterpolatedDataOptions {
 }
 
 type NumericRecord = Record<string, number | unknown>;
+
+/**
+ * Subscribe to reduced motion preference changes.
+ * Returns true if user prefers reduced motion.
+ */
+function subscribeToReducedMotion(callback: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  mediaQuery.addEventListener('change', callback);
+  return () => mediaQuery.removeEventListener('change', callback);
+}
+
+function getReducedMotionSnapshot(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function getReducedMotionServerSnapshot(): boolean {
+  return false;
+}
+
+/**
+ * Subscribe to tab visibility changes.
+ * Returns true if tab is visible.
+ */
+function subscribeToVisibility(callback: () => void): () => void {
+  if (typeof document === 'undefined') return () => {};
+  document.addEventListener('visibilitychange', callback);
+  return () => document.removeEventListener('visibilitychange', callback);
+}
+
+function getVisibilitySnapshot(): boolean {
+  if (typeof document === 'undefined') return true;
+  return document.visibilityState === 'visible';
+}
+
+function getVisibilityServerSnapshot(): boolean {
+  return true;
+}
 
 /**
  * Hook that smoothly interpolates between old and new data values
@@ -32,12 +71,28 @@ export function useInterpolatedData<T extends NumericRecord>(
   const prevDataRef = useRef<T[]>(data);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
+  const isFirstRenderRef = useRef(true);
 
-  // Check if user prefers reduced motion
-  const prefersReducedMotion = useRef(
-    typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  // Reactively track reduced motion preference
+  const prefersReducedMotion = useSyncExternalStore(
+    subscribeToReducedMotion,
+    getReducedMotionSnapshot,
+    getReducedMotionServerSnapshot
   );
+
+  // Reactively track tab visibility
+  const isTabVisible = useSyncExternalStore(
+    subscribeToVisibility,
+    getVisibilitySnapshot,
+    getVisibilityServerSnapshot
+  );
+
+  // Determine if animations should run
+  // If respectReducedMotion is true, we check the preference; otherwise we animate regardless
+  const shouldAnimate =
+    enabled &&
+    isTabVisible &&
+    (!chartAnimationConfig.respectReducedMotion || !prefersReducedMotion);
 
   // Cancel any in-flight animation
   const cancelAnimation = useCallback(() => {
@@ -49,22 +104,30 @@ export function useInterpolatedData<T extends NumericRecord>(
   }, []);
 
   useEffect(() => {
-    // If disabled, reduced motion, or no data, just set directly
-    if (!enabled || prefersReducedMotion.current || data.length === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: sync data when interpolation disabled
+    // Skip animation on first render if configured
+    const skipThisRender =
+      isFirstRenderRef.current && chartAnimationConfig.skipInitial;
+
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+    }
+
+    // If we shouldn't animate, set data directly
+    if (!shouldAnimate || data.length === 0 || skipThisRender) {
       setInterpolatedData(data);
       prevDataRef.current = data;
+      cancelAnimation();
       return;
     }
 
-    // If this is the first render with data, set directly
+    // If no previous data to interpolate from, set directly
     if (prevDataRef.current.length === 0) {
       setInterpolatedData(data);
       prevDataRef.current = data;
       return;
     }
 
-    // Cancel any existing animation
+    // Cancel any existing animation before starting new one
     cancelAnimation();
 
     const prevData = prevDataRef.current;
@@ -73,7 +136,7 @@ export function useInterpolatedData<T extends NumericRecord>(
     // Calculate how many points to interpolate (from the end)
     const startIndex = Math.max(0, newData.length - maxPoints);
 
-    // Easing function: ease-in-out
+    // Easing function: ease-in-out quadratic
     const easeInOut = (t: number): number => {
       return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
     };
@@ -92,10 +155,8 @@ export function useInterpolatedData<T extends NumericRecord>(
         const toVal = to[key];
 
         if (typeof fromVal === 'number' && typeof toVal === 'number') {
-          // Interpolate numeric values
           result[key] = fromVal + (toVal - fromVal) * progress;
         } else {
-          // Pass through non-numeric values
           result[key] = toVal;
         }
       }
@@ -143,14 +204,16 @@ export function useInterpolatedData<T extends NumericRecord>(
     return () => {
       cancelAnimation();
     };
-  }, [data, duration, enabled, maxPoints, cancelAnimation]);
+  }, [data, duration, shouldAnimate, maxPoints, cancelAnimation]);
 
-  // Cleanup on unmount
+  // Pause animation when tab becomes hidden
   useEffect(() => {
-    return () => {
+    if (!isTabVisible && animationFrameRef.current !== null) {
+      // Tab hidden mid-animation: cancel and snap to final state
       cancelAnimation();
-    };
-  }, [cancelAnimation]);
+      setInterpolatedData(prevDataRef.current);
+    }
+  }, [isTabVisible, cancelAnimation]);
 
   return interpolatedData;
 }

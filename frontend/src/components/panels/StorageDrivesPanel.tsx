@@ -6,12 +6,7 @@ import {
   Progress,
 } from '@chakra-ui/react';
 import { useStorage } from '../../context/DashboardContext';
-
-function formatBytes(bytes: number): string {
-  const gb = bytes / (1024 * 1024 * 1024);
-  if (gb >= 1024) return `${(gb / 1024).toFixed(1)} TB`;
-  return `${gb.toFixed(1)} GB`;
-}
+import { formatGB } from '../../utils/formatters';
 
 function getUsageColor(percent: number): string {
   if (percent >= 90) return 'red.400';
@@ -67,10 +62,10 @@ export function StorageDrivesPanel() {
           />
           <HStack justify="space-between" mt={2}>
             <Text fontSize="xs" color="fg.muted">
-              {formatBytes(drive.used)} used
+              {formatGB(drive.used)} used
             </Text>
             <Text fontSize="xs" color="fg.muted">
-              {formatBytes(drive.available)} free of {formatBytes(drive.total)}
+              {formatGB(drive.available)} free of {formatGB(drive.total)}
             </Text>
           </HStack>
         </Box>

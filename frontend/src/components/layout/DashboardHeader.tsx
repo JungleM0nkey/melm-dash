@@ -25,9 +25,11 @@ import { DistroIcon } from '../panels/DistroIcon';
 
 interface DashboardHeaderProps {
   onResetLayout: () => void;
+  /** Number of hidden panels (0 = none hidden) */
+  hiddenPanelCount?: number;
 }
 
-export function DashboardHeader({ onResetLayout }: DashboardHeaderProps) {
+export function DashboardHeader({ onResetLayout, hiddenPanelCount = 0 }: DashboardHeaderProps) {
   const connectionStatus = useConnectionStatus();
   const systemInfo = useSystemInfo();
   const [logoPreference, setLogoPreference] = useLogoPreference();
@@ -137,6 +139,19 @@ export function DashboardHeader({ onResetLayout }: DashboardHeaderProps) {
               py={1}
             >
               {systemInfo.timezone}
+            </Badge>
+          )}
+
+          {/* Hidden panels indicator */}
+          {hiddenPanelCount > 0 && (
+            <Badge
+              colorScheme="purple"
+              variant="solid"
+              fontSize="xs"
+              px={2}
+              py={1}
+            >
+              {hiddenPanelCount} hidden
             </Badge>
           )}
 
