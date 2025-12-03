@@ -324,7 +324,8 @@ export function DashboardProvider({
   );
 }
 
-// Custom hook
+// Custom hooks - exported alongside provider component
+// eslint-disable-next-line react-refresh/only-export-components
 export function useDashboard(): DashboardContextValue {
   const context = useContext(DashboardContext);
   if (!context) {
@@ -334,46 +335,55 @@ export function useDashboard(): DashboardContextValue {
 }
 
 // Selector hooks for optimized re-renders
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCpu() {
   const { state } = useDashboard();
   return { cpu: state.cpu, history: state.cpuHistory };
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useMemory() {
   const { state } = useDashboard();
   return { memory: state.memory, history: state.memoryHistory };
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useDocker() {
   const { state } = useDashboard();
   return state.docker;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePorts() {
   const { state } = useDashboard();
   return state.ports;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useStorage() {
   const { state } = useDashboard();
   return state.storage;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useNetwork() {
   const { state } = useDashboard();
   return { network: state.network, history: state.networkHistory };
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useServices() {
   const { state } = useDashboard();
   return state.services;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSystemInfo() {
   const { state } = useDashboard();
   return state.system;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useConnectionStatus() {
   const { state } = useDashboard();
   return state.connectionStatus;

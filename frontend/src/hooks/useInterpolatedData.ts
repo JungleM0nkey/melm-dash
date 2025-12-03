@@ -114,6 +114,7 @@ export function useInterpolatedData<T extends NumericRecord>(
 
     // If we shouldn't animate, set data directly
     if (!shouldAnimate || data.length === 0 || skipThisRender) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInterpolatedData(data);
       prevDataRef.current = data;
       cancelAnimation();

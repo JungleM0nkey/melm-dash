@@ -250,6 +250,7 @@ export function PanelManagementProvider({
 /**
  * Hook to access panel management context
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePanelManagement(): PanelManagementContextValue {
   const context = useContext(PanelManagementContext);
   if (!context) {
@@ -263,6 +264,7 @@ export function usePanelManagement(): PanelManagementContextValue {
 /**
  * Selector hook for visibility state only (reduces re-renders)
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePanelVisibilityState() {
   const { visiblePanelIds, hiddenPanelIds, isVisible } = usePanelManagement();
   return { visiblePanelIds, hiddenPanelIds, isVisible };
@@ -271,6 +273,7 @@ export function usePanelVisibilityState() {
 /**
  * Selector hook for drag state only (reduces re-renders)
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePanelDragState() {
   const { isDragging, draggedPanelId, isDrawerOpen } = usePanelManagement();
   return { isDragging, draggedPanelId, isDrawerOpen };
