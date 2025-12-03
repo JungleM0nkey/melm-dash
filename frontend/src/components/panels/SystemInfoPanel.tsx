@@ -55,9 +55,9 @@ function InfoRow({ label, value, icon }: InfoRowProps) {
           {label}
         </Text>
       </HStack>
-      <Text fontSize="sm" fontWeight="medium" textAlign="right">
+      <Box fontSize="sm" fontWeight="medium" textAlign="right">
         {value ?? '-'}
-      </Text>
+      </Box>
     </HStack>
   );
 }
