@@ -19,6 +19,7 @@ import {
   LOGO_SIZE_VALUES,
 } from '../../hooks/useLogoPreference';
 import type { LogoType, LogoSize } from '../../hooks/useLogoPreference';
+import { useTimezonePreference } from '../../hooks/useTimezonePreference';
 import { SettingsModal } from '../modals/SettingsModal';
 import { DistroIcon } from '../panels/DistroIcon';
 
@@ -32,24 +33,28 @@ export function DashboardHeader({ onResetLayout }: DashboardHeaderProps) {
   const [logoPreference, setLogoPreference] = useLogoPreference();
   const [logoSize, setLogoSize] = useLogoSize();
   const [customLogo, setCustomLogo] = useCustomLogo();
+  const [timezonePreference, setTimezonePreference] = useTimezonePreference();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const statusColor = {
+  const statusColorMap: Record<string, string> = {
     connected: 'green',
     disconnected: 'red',
     reconnecting: 'yellow',
-  }[connectionStatus];
+  };
+  const statusColor = statusColorMap[connectionStatus];
 
-  const statusText = {
+  const statusTextMap: Record<string, string> = {
     connected: 'Connected',
     disconnected: 'Disconnected',
     reconnecting: 'Reconnecting...',
-  }[connectionStatus];
+  };
+  const statusText = statusTextMap[connectionStatus];
 
-  const handleSettingsSave = (logo: LogoType, size: LogoSize, customLogoData: string | null) => {
+  const handleSettingsSave = (logo: LogoType, size: LogoSize, customLogoData: string | null, timezone: string) => {
     setLogoPreference(logo);
     setLogoSize(size);
     setCustomLogo(customLogoData);
+    setTimezonePreference(timezone);
   };
 
   const logoSizePixels = LOGO_SIZE_VALUES[logoSize];
@@ -170,6 +175,7 @@ export function DashboardHeader({ onResetLayout }: DashboardHeaderProps) {
         currentLogo={logoPreference}
         currentSize={logoSize}
         currentCustomLogo={customLogo}
+        currentTimezone={timezonePreference}
         onSave={handleSettingsSave}
       />
     </Box>

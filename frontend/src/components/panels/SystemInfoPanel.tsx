@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   VStack,
@@ -10,6 +10,10 @@ import {
 import { Info, Clock, Calendar, Container, type LucideIcon } from 'lucide-react';
 import { useSystemInfo } from '../../context/DashboardContext';
 import { DistroIcon } from './DistroIcon';
+import {
+  useTimezonePreference,
+  formatTimeForDisplay,
+} from '../../hooks/useTimezonePreference';
 
 function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400);
@@ -70,8 +74,47 @@ function InfoRow({ label, value, icon }: InfoRowProps) {
   );
 }
 
+// Format timezone for display (e.g., "America/New_York" -> "EST" or "EDT")
+function getTimezoneAbbrev(timezone: string): string {
+  try {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'short',
+    });
+    const parts = formatter.formatToParts(now);
+    const tzPart = parts.find(p => p.type === 'timeZoneName');
+    return tzPart?.value || timezone;
+  } catch {
+    return timezone;
+  }
+}
+
 export function SystemInfoPanel() {
   const system = useSystemInfo();
+  const [, , effectiveTimezone] = useTimezonePreference();
+  const [currentTime, setCurrentTime] = useState<string>('');
+
+  // Update time every second for live display
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const formatted = formatTimeForDisplay(now.toISOString(), effectiveTimezone, {
+        includeSeconds: true,
+        use24Hour: true,
+      });
+      setCurrentTime(formatted);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, [effectiveTimezone]);
+
+  // Get timezone abbreviation
+  const timezoneDisplay = useMemo(() => {
+    return getTimezoneAbbrev(effectiveTimezone);
+  }, [effectiveTimezone]);
 
   if (!system) {
     return (
@@ -118,8 +161,25 @@ export function SystemInfoPanel() {
         </Text>
         <InfoRow label="Uptime" value={formatUptime(system.uptime)} icon={Clock} />
         <InfoRow label="Location" value={system.location} />
-        <InfoRow label="Timezone" value={system.timezone} icon={Calendar} />
-        <InfoRow label="Local Time" value={system.currentTime} />
+        <InfoRow
+          label="Timezone"
+          value={
+            <HStack spacing={1}>
+              <Text fontSize="sm" fontWeight="medium">{timezoneDisplay}</Text>
+              <Text fontSize="xs" color="fg.muted">({effectiveTimezone.split('/').pop()?.replace(/_/g, ' ')})</Text>
+            </HStack>
+          }
+          icon={Calendar}
+        />
+        <InfoRow
+          label="Local Time"
+          value={
+            <Text fontSize="sm" fontWeight="medium" fontFamily="mono">
+              {currentTime}
+            </Text>
+          }
+          icon={Clock}
+        />
       </Box>
     </VStack>
   );

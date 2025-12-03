@@ -142,6 +142,22 @@ body {
   transform: rotate(45deg);
 }
 
+/* Chart animation optimizations */
+.recharts-area-area,
+.recharts-area-curve {
+  will-change: d;
+  transform: translateZ(0);
+}
+
+/* Respect reduced motion preference for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .recharts-area-area,
+  .recharts-area-curve {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

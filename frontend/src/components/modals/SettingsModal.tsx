@@ -17,12 +17,17 @@ import {
   Image,
   IconButton,
   Divider,
+  Select,
 } from '@chakra-ui/react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Upload, Trash2 } from 'lucide-react';
 import type { LogoType, LogoSize } from '../../hooks/useLogoPreference';
 import { LOGO_SIZE_VALUES } from '../../hooks/useLogoPreference';
 import { DistroIcon } from '../panels/DistroIcon';
+import {
+  getAvailableTimezones,
+  getLocalTimezone,
+} from '../../hooks/useTimezonePreference';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -30,7 +35,8 @@ interface SettingsModalProps {
   currentLogo: LogoType;
   currentSize: LogoSize;
   currentCustomLogo: string | null;
-  onSave: (logo: LogoType, size: LogoSize, customLogo: string | null) => void;
+  currentTimezone: string;
+  onSave: (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string) => void;
 }
 
 const LOGO_OPTIONS: Array<{ value: LogoType; label: string; span?: number }> = [
@@ -58,7 +64,8 @@ interface SettingsContentProps {
   currentLogo: LogoType;
   currentSize: LogoSize;
   currentCustomLogo: string | null;
-  onSave: (logo: LogoType, size: LogoSize, customLogo: string | null) => void;
+  currentTimezone: string;
+  onSave: (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string) => void;
   onCancel: () => void;
 }
 
@@ -66,17 +73,23 @@ function SettingsContent({
   currentLogo,
   currentSize,
   currentCustomLogo,
+  currentTimezone,
   onSave,
   onCancel,
 }: SettingsContentProps) {
   const [selectedLogo, setSelectedLogo] = useState<LogoType>(currentLogo);
   const [selectedSize, setSelectedSize] = useState<LogoSize>(currentSize);
   const [customLogoData, setCustomLogoData] = useState<string | null>(currentCustomLogo);
+  const [selectedTimezone, setSelectedTimezone] = useState<string>(currentTimezone);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Get available timezones
+  const timezones = useMemo(() => getAvailableTimezones(), []);
+  const localTimezone = useMemo(() => getLocalTimezone(), []);
+
   const handleSave = () => {
-    onSave(selectedLogo, selectedSize, customLogoData);
+    onSave(selectedLogo, selectedSize, customLogoData, selectedTimezone);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,7 +134,8 @@ function SettingsContent({
   const hasChanges =
     selectedLogo !== currentLogo ||
     selectedSize !== currentSize ||
-    customLogoData !== currentCustomLogo;
+    customLogoData !== currentCustomLogo ||
+    selectedTimezone !== currentTimezone;
 
   const selectedBg = useColorModeValue('blue.100', 'blue.700');
   const selectedBorder = useColorModeValue('blue.500', 'blue.400');
@@ -135,6 +149,36 @@ function SettingsContent({
 
       <ModalBody>
         <VStack align="stretch" spacing={6}>
+          {/* Timezone Section */}
+          <Box>
+            <Text color="fg.primary" fontSize="sm" fontWeight="semibold" mb={3}>
+              Timezone
+            </Text>
+            <Text color="fg.secondary" fontSize="xs" mb={3}>
+              Select the timezone for displaying local time
+            </Text>
+            <Select
+              value={selectedTimezone}
+              onChange={(e) => setSelectedTimezone(e.target.value)}
+              size="sm"
+              maxW="350px"
+              color="fg.primary"
+              borderColor={borderColor}
+              _hover={{ borderColor: selectedBorder }}
+            >
+              <option value="auto">Auto ({localTimezone})</option>
+              {timezones
+                .filter((tz) => tz !== 'auto')
+                .map((tz) => (
+                  <option key={tz} value={tz}>
+                    {tz.replace(/_/g, ' ')}
+                  </option>
+                ))}
+            </Select>
+          </Box>
+
+          <Divider borderColor="border.primary" />
+
           {/* Logo Size Section */}
           <Box>
             <Text color="fg.primary" fontSize="sm" fontWeight="semibold" mb={3}>
@@ -306,10 +350,11 @@ export function SettingsModal({
   currentLogo,
   currentSize,
   currentCustomLogo,
+  currentTimezone,
   onSave,
 }: SettingsModalProps) {
-  const handleSave = (logo: LogoType, size: LogoSize, customLogo: string | null) => {
-    onSave(logo, size, customLogo);
+  const handleSave = (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string) => {
+    onSave(logo, size, customLogo, timezone);
     onClose();
   };
 
@@ -322,6 +367,7 @@ export function SettingsModal({
             currentLogo={currentLogo}
             currentSize={currentSize}
             currentCustomLogo={currentCustomLogo}
+            currentTimezone={currentTimezone}
             onSave={handleSave}
             onCancel={onClose}
           />

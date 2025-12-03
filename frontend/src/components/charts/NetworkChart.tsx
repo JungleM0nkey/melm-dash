@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   AreaChart,
   Area,
@@ -8,6 +9,8 @@ import {
 } from 'recharts';
 import { Box, Text } from '@chakra-ui/react';
 import type { TimeSeriesPoint } from '@melm-dash/shared-types';
+import { useInterpolatedData } from '../../hooks/useInterpolatedData';
+import { chartAnimationConfig } from '../../config/animation';
 
 interface NetworkChartProps {
   data: TimeSeriesPoint<{ download: number; upload: number }>[];
@@ -60,11 +63,19 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 }
 
 export function NetworkChart({ data, height = 100 }: NetworkChartProps) {
-  const chartData = data.map((point) => ({
-    download: point.data.download,
-    upload: point.data.upload,
-    timestamp: point.timestamp,
-  }));
+  const rawChartData = useMemo(
+    () =>
+      data.map((point) => ({
+        download: point.data.download,
+        upload: point.data.upload,
+        timestamp: point.timestamp,
+      })),
+    [data]
+  );
+
+  // Apply smooth interpolation between data updates
+  // The hook handles first render internally (skips animation when no previous data)
+  const chartData = useInterpolatedData(rawChartData);
 
   // Calculate max value for Y axis
   const maxValue = Math.max(
@@ -108,7 +119,9 @@ export function NetworkChart({ data, height = 100 }: NetworkChartProps) {
           stroke="#4299E1"
           strokeWidth={2}
           fill="url(#gradient-download)"
-          isAnimationActive={false}
+          isAnimationActive={true}
+          animationDuration={chartAnimationConfig.duration}
+          animationEasing={chartAnimationConfig.easing}
         />
         <Area
           type="monotone"
@@ -116,7 +129,9 @@ export function NetworkChart({ data, height = 100 }: NetworkChartProps) {
           stroke="#48BB78"
           strokeWidth={2}
           fill="url(#gradient-upload)"
-          isAnimationActive={false}
+          isAnimationActive={true}
+          animationDuration={chartAnimationConfig.duration}
+          animationEasing={chartAnimationConfig.easing}
         />
       </AreaChart>
     </ResponsiveContainer>

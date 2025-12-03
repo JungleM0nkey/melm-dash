@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   AreaChart,
   Area,
@@ -5,6 +6,8 @@ import {
   YAxis,
 } from 'recharts';
 import type { TimeSeriesPoint } from '@melm-dash/shared-types';
+import { useInterpolatedData } from '../../hooks/useInterpolatedData';
+import { chartAnimationConfig } from '../../config/animation';
 
 interface AreaSparklineProps {
   data: TimeSeriesPoint<number>[];
@@ -19,10 +22,18 @@ export function AreaSparkline({
   height = 60,
   maxValue = 100,
 }: AreaSparklineProps) {
-  const chartData = data.map((point) => ({
-    value: point.data,
-    timestamp: point.timestamp,
-  }));
+  const rawChartData = useMemo(
+    () =>
+      data.map((point) => ({
+        value: point.data,
+        timestamp: point.timestamp,
+      })),
+    [data]
+  );
+
+  // Apply smooth interpolation between data updates
+  // The hook handles first render internally (skips animation when no previous data)
+  const chartData = useInterpolatedData(rawChartData);
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -40,7 +51,9 @@ export function AreaSparkline({
           stroke={color}
           strokeWidth={2}
           fill={`url(#gradient-${color.replace('#', '')})`}
-          isAnimationActive={false}
+          isAnimationActive={true}
+          animationDuration={chartAnimationConfig.duration}
+          animationEasing={chartAnimationConfig.easing}
         />
       </AreaChart>
     </ResponsiveContainer>

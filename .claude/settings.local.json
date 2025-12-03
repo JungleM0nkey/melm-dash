@@ -5,7 +5,8 @@
       "Bash(cat:*)",
       "Bash(pnpm --filter @melm-dash/frontend typecheck:*)",
       "Bash(pnpm --filter @melm-dash/frontend lint:*)",
-      "Bash(pnpm --filter @melm-dash/frontend test)"
+      "Bash(pnpm --filter @melm-dash/frontend test)",
+      "Bash(npx eslint:*)"
     ],
     "deny": [],
     "ask": []
