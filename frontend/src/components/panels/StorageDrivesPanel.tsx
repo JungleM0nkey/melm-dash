@@ -25,9 +25,12 @@ export function StorageDrivesPanel() {
     );
   }
 
+  // Sort by usage percentage, highest first
+  const sortedStorage = [...storage].sort((a, b) => b.usagePercent - a.usagePercent);
+
   return (
     <VStack spacing={3} align="stretch">
-      {storage.map((drive, index) => (
+      {sortedStorage.map((drive, index) => (
         <Box
           key={`${drive.device}-${index}`}
           p={3}

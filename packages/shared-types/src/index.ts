@@ -60,6 +60,7 @@ export interface NetworkInterface {
   mac: string;
   status: 'up' | 'down';
   type: string;
+  connectionMode?: string; // NAT, mirrored, bridge, host, overlay, macvlan, etc.
 }
 
 export interface NetworkMetrics {
@@ -87,6 +88,8 @@ export interface SystemInfo {
   distroName?: string;       // Display name (Ubuntu, Debian, Arch Linux, etc.)
   inContainer?: boolean;     // Running in container
   containerType?: string;    // Container type (docker, podman, lxc, etc.)
+  isWsl?: boolean;           // Running in Windows Subsystem for Linux
+  wslVersion?: number;       // WSL version (1 or 2)
 }
 
 // =============================================================================

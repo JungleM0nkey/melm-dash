@@ -1,5 +1,5 @@
 import { useDrop } from 'react-dnd';
-import { Box, Text, VStack } from '@chakra-ui/react';
+import { Box, Text, VStack, useToken } from '@chakra-ui/react';
 import { Download } from 'lucide-react';
 import { PANEL_DRAG_TYPE, type PanelDragItem } from '../../types/panel';
 
@@ -15,6 +15,9 @@ interface PanelDropZoneProps {
  * Appears in the drawer when a panel is being dragged.
  */
 export function PanelDropZone({ onDrop, isActive }: PanelDropZoneProps) {
+  // Get theme-aware colors
+  const [purpleColor, mutedColor] = useToken('colors', ['accent.purple', 'fg.muted']);
+
   const [{ isOver, canDrop }, dropRef] = useDrop<
     PanelDragItem,
     void,
@@ -63,7 +66,7 @@ export function PanelDropZone({ onDrop, isActive }: PanelDropZoneProps) {
       <VStack spacing={2}>
         <Download
           size={24}
-          color={isHighlighted ? '#805AD5' : '#a0a0a0'}
+          color={isHighlighted ? purpleColor : mutedColor}
           style={{
             transition: 'color 150ms ease',
             transform: isHighlighted ? 'scale(1.1)' : 'scale(1)',

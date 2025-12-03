@@ -27,7 +27,7 @@ import {
   Tooltip,
 } from '@chakra-ui/react';
 import { useState, useRef, useMemo } from 'react';
-import { Upload, Trash2, Clock, Palette, ImageIcon } from 'lucide-react';
+import { Upload, Trash2, Clock, Palette, ImageIcon, Sun, Moon, Monitor, Square, RectangleHorizontal } from 'lucide-react';
 import type { LogoType, LogoSize } from '../../hooks/useLogoPreference';
 import { LOGO_SIZE_VALUES } from '../../hooks/useLogoPreference';
 import { DistroIcon } from '../panels/DistroIcon';
@@ -35,6 +35,8 @@ import {
   getAvailableTimezones,
   getLocalTimezone,
 } from '../../hooks/useTimezonePreference';
+import type { ThemeMode } from '../../hooks/useThemePreference';
+import type { BorderRadiusStyle } from '../../hooks/useBorderRadius';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -44,7 +46,10 @@ interface SettingsModalProps {
   currentCustomLogo: string | null;
   currentTimezone: string;
   currentCustomSizeValue: number;
-  onSave: (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string, customSizeValue: number) => void;
+  currentTheme: ThemeMode;
+  currentLogoColor: string;
+  currentBorderRadius: BorderRadiusStyle;
+  onSave: (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string, customSizeValue: number, theme: ThemeMode, logoColor: string, borderRadius: BorderRadiusStyle) => void;
 }
 
 const LOGO_OPTIONS: Array<{ value: LogoType; label: string }> = [
@@ -69,13 +74,41 @@ const SIZE_PRESETS: Array<{ value: Exclude<LogoSize, 'custom'>; label: string }>
 
 const MAX_FILE_SIZE = 512 * 1024; // 512KB
 
+const THEME_OPTIONS: Array<{ value: ThemeMode; label: string; icon: typeof Sun; description: string }> = [
+  { value: 'light', label: 'Light', icon: Sun, description: 'Always use light mode' },
+  { value: 'dark', label: 'Dark', icon: Moon, description: 'Always use dark mode' },
+  { value: 'system', label: 'System', icon: Monitor, description: 'Follow system preference' },
+];
+
+const BORDER_RADIUS_OPTIONS: Array<{ value: BorderRadiusStyle; label: string; icon: typeof Square }> = [
+  { value: 'sharp', label: 'Sharp', icon: Square },
+  { value: 'rounded', label: 'Rounded', icon: RectangleHorizontal },
+];
+
+// Preset colors for the logo color picker
+const PRESET_COLORS = [
+  '', // Default (no color / gray)
+  '#805AD5', // Purple
+  '#4299E1', // Blue
+  '#38B2AC', // Teal
+  '#48BB78', // Green
+  '#ECC94B', // Yellow
+  '#ED8936', // Orange
+  '#F56565', // Red
+  '#ED64A6', // Pink
+  '#FFFFFF', // White
+];
+
 interface SettingsContentProps {
   currentLogo: LogoType;
   currentSize: LogoSize;
   currentCustomLogo: string | null;
   currentTimezone: string;
   currentCustomSizeValue: number;
-  onSave: (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string, customSizeValue: number) => void;
+  currentTheme: ThemeMode;
+  currentLogoColor: string;
+  currentBorderRadius: BorderRadiusStyle;
+  onSave: (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string, customSizeValue: number, theme: ThemeMode, logoColor: string, borderRadius: BorderRadiusStyle) => void;
   onCancel: () => void;
 }
 
@@ -94,6 +127,9 @@ function SettingSection({ icon, title, children }: SettingSectionProps) {
       borderRadius="lg"
       borderWidth="1px"
       borderColor={borderColor}
+      flex="1"
+      display="flex"
+      flexDirection="column"
     >
       <HStack spacing={2} mb={4}>
         <Box color="blue.400">{icon}</Box>
@@ -101,7 +137,7 @@ function SettingSection({ icon, title, children }: SettingSectionProps) {
           {title}
         </Text>
       </HStack>
-      {children}
+      <Box flex="1">{children}</Box>
     </Box>
   );
 }
@@ -112,6 +148,9 @@ function SettingsContent({
   currentCustomLogo,
   currentTimezone,
   currentCustomSizeValue,
+  currentTheme,
+  currentLogoColor,
+  currentBorderRadius,
   onSave,
   onCancel,
 }: SettingsContentProps) {
@@ -120,6 +159,9 @@ function SettingsContent({
   const [customLogoData, setCustomLogoData] = useState<string | null>(currentCustomLogo);
   const [selectedTimezone, setSelectedTimezone] = useState<string>(currentTimezone);
   const [customSizeValue, setCustomSizeValue] = useState<number>(currentCustomSizeValue);
+  const [selectedTheme, setSelectedTheme] = useState<ThemeMode>(currentTheme);
+  const [selectedLogoColor, setSelectedLogoColor] = useState<string>(currentLogoColor);
+  const [selectedBorderRadius, setSelectedBorderRadius] = useState<BorderRadiusStyle>(currentBorderRadius);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -127,7 +169,7 @@ function SettingsContent({
   const localTimezone = useMemo(() => getLocalTimezone(), []);
 
   const handleSave = () => {
-    onSave(selectedLogo, selectedSize, customLogoData, selectedTimezone, customSizeValue);
+    onSave(selectedLogo, selectedSize, customLogoData, selectedTimezone, customSizeValue, selectedTheme, selectedLogoColor, selectedBorderRadius);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,7 +228,10 @@ function SettingsContent({
     selectedSize !== currentSize ||
     customLogoData !== currentCustomLogo ||
     selectedTimezone !== currentTimezone ||
-    customSizeValue !== currentCustomSizeValue;
+    customSizeValue !== currentCustomSizeValue ||
+    selectedTheme !== currentTheme ||
+    selectedLogoColor !== currentLogoColor ||
+    selectedBorderRadius !== currentBorderRadius;
 
   const selectedBg = useColorModeValue('blue.50', 'blue.900');
   const selectedBorder = useColorModeValue('blue.500', 'blue.400');
@@ -234,7 +279,7 @@ function SettingsContent({
                       borderRadius="md"
                     />
                   ) : (
-                    <DistroIcon distro={selectedLogo} size={displaySize} />
+                    <DistroIcon distro={selectedLogo} size={displaySize} color={selectedLogoColor} />
                   )}
                 </Box>
               </Box>
@@ -304,18 +349,70 @@ function SettingsContent({
                         alignItems="center"
                         justifyContent="center"
                       >
-                        <DistroIcon distro={value} size={28} />
+                        <DistroIcon distro={value} size={28} color={selectedLogoColor} />
                       </Box>
                     </Tooltip>
                   );
                 })}
               </Grid>
+
+              <Divider my={3} />
+
+              {/* Logo Color Picker */}
+              <Box>
+                <Flex justify="space-between" align="center" mb={2}>
+                  <Text color="fg.secondary" fontSize="xs">
+                    Color
+                  </Text>
+                  <Text color="fg.muted" fontSize="xs">
+                    {selectedLogoColor || 'Default'}
+                  </Text>
+                </Flex>
+                <HStack spacing={2} flexWrap="wrap">
+                  {PRESET_COLORS.map((color, index) => {
+                    const isSelected = selectedLogoColor === color;
+                    const isDefault = color === '';
+                    return (
+                      <Tooltip key={index} label={isDefault ? 'Default (Gray)' : color} hasArrow>
+                        <Box
+                          as="button"
+                          onClick={() => setSelectedLogoColor(color)}
+                          w="28px"
+                          h="28px"
+                          borderRadius="md"
+                          borderWidth="2px"
+                          borderColor={isSelected ? selectedBorder : borderColor}
+                          bg={isDefault ? 'gray.500' : color}
+                          _hover={{ transform: 'scale(1.1)' }}
+                          transition="all 0.15s"
+                          cursor="pointer"
+                          position="relative"
+                        >
+                          {isDefault && (
+                            <Box
+                              position="absolute"
+                              top="50%"
+                              left="50%"
+                              transform="translate(-50%, -50%)"
+                              w="60%"
+                              h="2px"
+                              bg="gray.300"
+                              borderRadius="full"
+                              style={{ transform: 'translate(-50%, -50%) rotate(-45deg)' }}
+                            />
+                          )}
+                        </Box>
+                      </Tooltip>
+                    );
+                  })}
+                </HStack>
+              </Box>
             </SettingSection>
           </GridItem>
 
           {/* Right Column: Custom Logo & General Settings */}
-          <GridItem>
-            <VStack spacing={4} align="stretch">
+          <GridItem display="flex" flexDirection="column">
+            <VStack spacing={4} align="stretch" flex="1">
               {/* Custom Logo Upload */}
               <SettingSection icon={<ImageIcon size={18} />} title="Custom Logo">
                 <VStack spacing={3} align="stretch">
@@ -426,6 +523,62 @@ function SettingsContent({
                     ))}
                 </Select>
               </SettingSection>
+
+              {/* Theme - flex to fill remaining space */}
+              <Box flex="1" display="flex" flexDirection="column">
+                <SettingSection icon={<Sun size={18} />} title="Theme">
+                  <VStack spacing={3} align="stretch">
+                  <HStack spacing={2}>
+                    {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
+                      const isSelected = selectedTheme === value;
+                      return (
+                        <Button
+                          key={value}
+                          size="sm"
+                          flex="1"
+                          variant={isSelected ? 'solid' : 'outline'}
+                          colorScheme={isSelected ? 'blue' : 'gray'}
+                          leftIcon={<Icon size={16} />}
+                          onClick={() => setSelectedTheme(value)}
+                        >
+                          {label}
+                        </Button>
+                      );
+                    })}
+                  </HStack>
+                  <Text color="fg.muted" fontSize="xs">
+                    {THEME_OPTIONS.find((opt) => opt.value === selectedTheme)?.description}
+                  </Text>
+
+                  <Divider />
+
+                  {/* Corner Style */}
+                  <Box>
+                    <Text color="fg.secondary" fontSize="xs" mb={2}>
+                      Corners
+                    </Text>
+                    <HStack spacing={2}>
+                      {BORDER_RADIUS_OPTIONS.map(({ value, label, icon: Icon }) => {
+                        const isSelected = selectedBorderRadius === value;
+                        return (
+                          <Button
+                            key={value}
+                            size="sm"
+                            flex="1"
+                            variant={isSelected ? 'solid' : 'outline'}
+                            colorScheme={isSelected ? 'blue' : 'gray'}
+                            leftIcon={<Icon size={16} />}
+                            onClick={() => setSelectedBorderRadius(value)}
+                          >
+                            {label}
+                          </Button>
+                        );
+                      })}
+                    </HStack>
+                  </Box>
+                </VStack>
+              </SettingSection>
+              </Box>
             </VStack>
           </GridItem>
         </Grid>
@@ -451,10 +604,13 @@ export function SettingsModal({
   currentCustomLogo,
   currentTimezone,
   currentCustomSizeValue,
+  currentTheme,
+  currentLogoColor,
+  currentBorderRadius,
   onSave,
 }: SettingsModalProps) {
-  const handleSave = (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string, customSizeValue: number) => {
-    onSave(logo, size, customLogo, timezone, customSizeValue);
+  const handleSave = (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string, customSizeValue: number, theme: ThemeMode, logoColor: string, borderRadius: BorderRadiusStyle) => {
+    onSave(logo, size, customLogo, timezone, customSizeValue, theme, logoColor, borderRadius);
     onClose();
   };
 
@@ -469,6 +625,9 @@ export function SettingsModal({
             currentCustomLogo={currentCustomLogo}
             currentTimezone={currentTimezone}
             currentCustomSizeValue={currentCustomSizeValue}
+            currentTheme={currentTheme}
+            currentLogoColor={currentLogoColor}
+            currentBorderRadius={currentBorderRadius}
             onSave={handleSave}
             onCancel={onClose}
           />

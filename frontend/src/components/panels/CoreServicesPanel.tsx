@@ -28,9 +28,16 @@ export function CoreServicesPanel() {
     );
   }
 
+  // Sort services: running first, then by name
+  const sortedServices = [...services].sort((a, b) => {
+    if (a.status === 'running' && b.status !== 'running') return -1;
+    if (a.status !== 'running' && b.status === 'running') return 1;
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <VStack spacing={2} align="stretch">
-      {services.map((service, index) => {
+      {sortedServices.map((service, index) => {
         const config = statusConfig[service.status] || statusConfig.unknown;
         // Extract component and capitalize for React 19 compatibility
         const StatusIcon = config.icon;

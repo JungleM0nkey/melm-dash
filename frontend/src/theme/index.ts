@@ -1,29 +1,25 @@
 import { extendTheme, type ThemeConfig } from '@chakra-ui/react';
 
 const config: ThemeConfig = {
-  initialColorMode: 'dark',
-  useSystemColorMode: false,
+  initialColorMode: 'system',
+  useSystemColorMode: true,
 };
 
+// Border radius values using CSS custom properties (set by useBorderRadius hook)
+const radii = {
+  none: '0',
+  sm: 'var(--melm-radius-sm, 4px)',
+  base: 'var(--melm-radius-md, 8px)',
+  md: 'var(--melm-radius-md, 8px)',
+  lg: 'var(--melm-radius-lg, 12px)',
+  xl: 'var(--melm-radius-xl, 16px)',
+  '2xl': 'var(--melm-radius-xl, 16px)',
+  '3xl': 'var(--melm-radius-xl, 16px)',
+  full: '9999px',
+};
+
+// Static colors (same in both light and dark modes)
 const colors = {
-  // Background colors
-  bg: {
-    primary: '#0d0d0d',
-    panel: '#1e1e1e',
-    header: '#141414',
-    hover: '#2a2a2a',
-  },
-  // Foreground/text colors
-  fg: {
-    primary: '#f5f5f5',
-    muted: '#a0a0a0',
-    accent: '#ffffff',
-  },
-  // Border colors
-  border: {
-    primary: '#2d2d2d',
-    hover: '#3d3d3d',
-  },
   // Status colors
   status: {
     running: '#48BB78',
@@ -33,7 +29,7 @@ const colors = {
     failed: '#F56565',
     unknown: '#A0AEC0',
   },
-  // Chart colors
+  // Chart colors (slightly adjusted for light mode via semantic tokens)
   chart: {
     cpu: '#805AD5',
     ram: '#38B2AC',
@@ -46,6 +42,86 @@ const colors = {
     teal: '#38B2AC',
     blue: '#4299E1',
     green: '#48BB78',
+  },
+};
+
+// Semantic tokens with light/dark variants
+const semanticTokens = {
+  colors: {
+    // Background colors
+    'bg.primary': {
+      _light: '#ffffff',
+      _dark: '#0d0d0d',
+    },
+    'bg.panel': {
+      _light: '#f8f9fa',
+      _dark: '#1e1e1e',
+    },
+    'bg.header': {
+      _light: '#f0f1f2',
+      _dark: '#141414',
+    },
+    'bg.hover': {
+      _light: '#e9ecef',
+      _dark: '#2a2a2a',
+    },
+    // Foreground/text colors
+    'fg.primary': {
+      _light: '#1a1a1a',
+      _dark: '#f5f5f5',
+    },
+    'fg.muted': {
+      _light: '#6c757d',
+      _dark: '#a0a0a0',
+    },
+    'fg.accent': {
+      _light: '#000000',
+      _dark: '#ffffff',
+    },
+    // Border colors
+    'border.primary': {
+      _light: '#dee2e6',
+      _dark: '#2d2d2d',
+    },
+    'border.hover': {
+      _light: '#ced4da',
+      _dark: '#3d3d3d',
+    },
+    // Chart axis colors (for readability)
+    'chart.axis': {
+      _light: '#6c757d',
+      _dark: '#a0a0a0',
+    },
+    // Chart colors with light mode adjustments (darker for contrast)
+    'chart.cpuLine': {
+      _light: '#6B46C1',
+      _dark: '#805AD5',
+    },
+    'chart.ramLine': {
+      _light: '#2C7A7B',
+      _dark: '#38B2AC',
+    },
+    'chart.downloadLine': {
+      _light: '#2B6CB0',
+      _dark: '#4299E1',
+    },
+    'chart.uploadLine': {
+      _light: '#276749',
+      _dark: '#48BB78',
+    },
+    // Grid line colors for dashboard background
+    'grid.line': {
+      _light: 'rgba(0, 0, 0, 0.08)',
+      _dark: 'rgba(60, 60, 60, 0.35)',
+    },
+    'grid.lineDrag': {
+      _light: 'rgba(128, 90, 213, 0.15)',
+      _dark: 'rgba(128, 90, 213, 0.25)',
+    },
+    'grid.placeholder': {
+      _light: 'rgba(128, 90, 213, 0.3)',
+      _dark: 'rgba(128, 90, 213, 0.2)',
+    },
   },
 };
 
@@ -235,6 +311,8 @@ const textStyles = {
 export const theme = extendTheme({
   config,
   colors,
+  radii,
+  semanticTokens,
   fonts,
   styles,
   components,

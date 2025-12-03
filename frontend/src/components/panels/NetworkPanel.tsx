@@ -69,6 +69,15 @@ export function NetworkPanel() {
                     >
                       {iface.status}
                     </Badge>
+                    {iface.connectionMode && (
+                      <Badge
+                        colorScheme="blue"
+                        fontSize="xs"
+                        variant="outline"
+                      >
+                        {iface.connectionMode}
+                      </Badge>
+                    )}
                   </HStack>
                   <Text fontSize="xs" color="fg.muted">
                     {iface.type}

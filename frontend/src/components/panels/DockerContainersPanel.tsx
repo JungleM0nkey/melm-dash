@@ -9,8 +9,10 @@ import {
   Badge,
   Text,
   HStack,
+  VStack,
   Progress,
 } from '@chakra-ui/react';
+import { Container } from 'lucide-react';
 import { useDocker } from '../../context/DashboardContext';
 import { formatUptime, formatMemory } from '../../utils/formatters';
 
@@ -26,9 +28,10 @@ export function DockerContainersPanel() {
 
   if (containers.length === 0) {
     return (
-      <Box textAlign="center" py={8}>
+      <VStack py={8} spacing={3}>
+        <Container size={32} color="var(--chakra-colors-fg-muted)" />
         <Text color="fg.muted">No Docker containers found</Text>
-      </Box>
+      </VStack>
     );
   }
 

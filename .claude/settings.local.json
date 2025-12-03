@@ -19,7 +19,9 @@
       "Bash(pnpm --filter @melm-dash/backend test)",
       "Bash(curl:*)",
       "Bash(node:*)",
-      "Bash(pnpm --filter @melm-dash/shared-types build:*)"
+      "Bash(pnpm --filter @melm-dash/shared-types build:*)",
+      "Bash(lsof:*)",
+      "Bash(pnpm lint:*)"
     ],
     "deny": [],
     "ask": []

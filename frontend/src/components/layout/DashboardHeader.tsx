@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   Box,
   Flex,
@@ -21,6 +22,9 @@ import {
 } from '../../hooks/useLogoPreference';
 import type { LogoType, LogoSize } from '../../hooks/useLogoPreference';
 import { useTimezonePreference } from '../../hooks/useTimezonePreference';
+import { useThemePreference, type ThemeMode } from '../../hooks/useThemePreference';
+import { useLogoColor } from '../../hooks/useLogoColor';
+import { useBorderRadius, type BorderRadiusStyle } from '../../hooks/useBorderRadius';
 import { SettingsModal } from '../modals/SettingsModal';
 import { DistroIcon } from '../panels/DistroIcon';
 
@@ -47,6 +51,9 @@ export function DashboardHeader({
   const [customLogo, setCustomLogo] = useCustomLogo();
   const [customSizeValue, setCustomSizeValue] = useCustomSizeValue();
   const [timezonePreference, setTimezonePreference] = useTimezonePreference();
+  const [themePreference, setThemePreference] = useThemePreference();
+  const [logoColor, setLogoColor] = useLogoColor();
+  const [borderRadius, setBorderRadius] = useBorderRadius();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const statusColorMap: Record<string, string> = {
@@ -63,12 +70,24 @@ export function DashboardHeader({
   };
   const statusText = statusTextMap[connectionStatus];
 
-  const handleSettingsSave = (logo: LogoType, size: LogoSize, customLogoData: string | null, timezone: string, customSize: number) => {
+  const handleSettingsSave = (
+    logo: LogoType,
+    size: LogoSize,
+    customLogoData: string | null,
+    timezone: string,
+    customSize: number,
+    theme: ThemeMode,
+    newLogoColor: string,
+    newBorderRadius: BorderRadiusStyle
+  ) => {
     setLogoPreference(logo);
     setLogoSize(size);
     setCustomLogo(customLogoData);
     setTimezonePreference(timezone);
     setCustomSizeValue(customSize);
+    setThemePreference(theme);
+    setLogoColor(newLogoColor);
+    setBorderRadius(newBorderRadius);
   };
 
   const logoSizePixels = logoSize === 'custom' ? customSizeValue : LOGO_SIZE_VALUES[logoSize];
@@ -76,6 +95,63 @@ export function DashboardHeader({
   const isMelm = logoPreference === 'melm';
   const containerWidth = isMelm ? `${logoSizePixels * 2 + 8}px` : `${logoSizePixels + 8}px`;
   const containerHeight = `${logoSizePixels + 8}px`;
+
+  // Live clock state
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Determine environment type for badge
+  const getEnvironmentBadge = (): { label: string; colorScheme: string } | null => {
+    if (!systemInfo) return null;
+
+    if (systemInfo.isWsl) {
+      const version = systemInfo.wslVersion ? ` ${systemInfo.wslVersion}` : '';
+      return { label: `WSL${version}`, colorScheme: 'blue' };
+    }
+
+    if (systemInfo.inContainer) {
+      const type = systemInfo.containerType || 'Container';
+      // Capitalize first letter
+      const label = type.charAt(0).toUpperCase() + type.slice(1);
+      return { label, colorScheme: 'purple' };
+    }
+
+    // Native/bare-metal host
+    return { label: 'Native', colorScheme: 'green' };
+  };
+
+  const environmentBadge = getEnvironmentBadge();
+
+  // Format time based on timezone preference
+  const formatLiveTime = () => {
+    const options: Intl.DateTimeFormatOptions = {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    };
+
+    if (timezonePreference === 'local') {
+      return currentTime.toLocaleTimeString(undefined, options);
+    } else if (timezonePreference === 'utc') {
+      return currentTime.toLocaleTimeString(undefined, { ...options, timeZone: 'UTC' });
+    } else if (systemInfo?.timezone) {
+      // Use server timezone
+      try {
+        return currentTime.toLocaleTimeString(undefined, { ...options, timeZone: systemInfo.timezone });
+      } catch {
+        return currentTime.toLocaleTimeString(undefined, options);
+      }
+    }
+    return currentTime.toLocaleTimeString(undefined, options);
+  };
 
   return (
     <Box
@@ -109,7 +185,7 @@ export function DashboardHeader({
                 borderRadius="lg"
               />
             ) : (
-              <DistroIcon distro={logoPreference} size={logoSizePixels} />
+              <DistroIcon distro={logoPreference} size={logoSizePixels} color={logoColor} />
             )}
           </Box>
 
@@ -131,27 +207,39 @@ export function DashboardHeader({
               </Tooltip>
             </HStack>
             {systemInfo && (
-              <Text fontSize="xs" color="fg.muted">
-                {systemInfo.os} • {systemInfo.kernel}
-              </Text>
+              <HStack spacing={2}>
+                <Text fontSize="xs" color="fg.muted">
+                  {systemInfo.os} • {systemInfo.kernel}
+                </Text>
+                {environmentBadge && (
+                  <Badge
+                    colorScheme={environmentBadge.colorScheme}
+                    fontSize="2xs"
+                    variant="subtle"
+                    px={1.5}
+                    py={0.5}
+                  >
+                    {environmentBadge.label}
+                  </Badge>
+                )}
+              </HStack>
             )}
           </Box>
         </HStack>
 
         <HStack spacing={4}>
 
-          {/* System time */}
-          {systemInfo?.currentTime && (
-            <Badge
-              variant="subtle"
-              colorScheme="gray"
-              fontSize="xs"
-              px={2}
-              py={1}
-            >
-              {systemInfo.timezone}
-            </Badge>
-          )}
+          {/* Live clock */}
+          <Badge
+            variant="subtle"
+            colorScheme="gray"
+            fontSize="xs"
+            px={2}
+            py={1}
+            fontFamily="mono"
+          >
+            {formatLiveTime()}
+          </Badge>
 
           {/* Hidden panels indicator */}
           {hiddenPanelCount > 0 && (
@@ -214,6 +302,9 @@ export function DashboardHeader({
         currentCustomLogo={customLogo}
         currentTimezone={timezonePreference}
         currentCustomSizeValue={customSizeValue}
+        currentTheme={themePreference}
+        currentLogoColor={logoColor}
+        currentBorderRadius={borderRadius}
         onSave={handleSettingsSave}
       />
     </Box>

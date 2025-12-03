@@ -74,6 +74,29 @@ async function detectDistribution(): Promise<{ distro?: string; distroName?: str
 }
 
 /**
+ * Detect if running in Windows Subsystem for Linux (WSL)
+ */
+async function detectWsl(): Promise<{ isWsl?: boolean; wslVersion?: number }> {
+  try {
+    // Check /proc/version for Microsoft/WSL indicators
+    const procVersion = await readFile('/proc/version', 'utf-8');
+    const lowerVersion = procVersion.toLowerCase();
+
+    if (lowerVersion.includes('microsoft') || lowerVersion.includes('wsl')) {
+      // Determine WSL version
+      // WSL2 uses a real Linux kernel (microsoft-standard-WSL2)
+      // WSL1 uses Microsoft's compatibility layer
+      const isWsl2 = lowerVersion.includes('wsl2') || lowerVersion.includes('microsoft-standard');
+      return { isWsl: true, wslVersion: isWsl2 ? 2 : 1 };
+    }
+
+    return { isWsl: false };
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Detect if running inside a container
  */
 async function detectContainer(): Promise<{ inContainer?: boolean; containerType?: string }> {
@@ -128,11 +151,12 @@ async function detectContainer(): Promise<{ inContainer?: boolean; containerType
  * Uses execFile instead of exec to prevent command injection
  */
 export async function collectSystem(): Promise<SystemInfo> {
-  const [osInfo, time, distroInfo, containerInfo] = await Promise.all([
+  const [osInfo, time, distroInfo, containerInfo, wslInfo] = await Promise.all([
     si.osInfo(),
     si.time(),
     detectDistribution(),
     detectContainer(),
+    detectWsl(),
   ]);
 
   // Try to get package count from various package managers
@@ -165,5 +189,7 @@ export async function collectSystem(): Promise<SystemInfo> {
     distroName: distroInfo.distroName,
     inContainer: containerInfo.inContainer,
     containerType: containerInfo.containerType,
+    isWsl: wslInfo.isWsl,
+    wslVersion: wslInfo.wslVersion,
   };
 }

@@ -17,6 +17,7 @@ import {
   useCustomSizeValue,
   LOGO_SIZE_VALUES,
 } from '../../hooks/useLogoPreference';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 // Import panel components
 import { SystemResourcesPanel } from '../panels/SystemResourcesPanel';
@@ -130,6 +131,9 @@ function storeLayoutsAsync(layouts: Layouts): void {
 }
 
 export function DashboardLayout() {
+  // Update document title and favicon based on connection status
+  useDocumentTitle();
+
   const [layouts, setLayouts] = useState<Layouts>(() => {
     return getStoredLayouts() || defaultLayouts;
   });
