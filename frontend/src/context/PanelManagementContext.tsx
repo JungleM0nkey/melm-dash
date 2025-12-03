@@ -13,6 +13,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import type { Layouts } from 'react-grid-layout';
 import { usePanelVisibility } from '../hooks/usePanelVisibility';
 import type { HiddenPanelPositions } from '../types/panel';
+import { PanelDragLayer } from '../components/layout/PanelDragLayer';
 
 /**
  * Drag state for tracking active drag operations
@@ -42,6 +43,11 @@ export interface PanelManagementContextValue {
   showPanel: (panelId: string) => HiddenPanelPositions[string] | null;
   onDragStart: (panelId: string, source: 'grid' | 'drawer') => void;
   onDragEnd: () => void;
+
+  // Drawer controls
+  openDrawer: () => void;
+  closeDrawer: () => void;
+  toggleDrawer: () => void;
 
   // Reset
   resetAll: () => void;
@@ -85,8 +91,11 @@ export function PanelManagementProvider({
     dragSource: null,
   });
 
-  // Track if drawer should be forced open (during drag or after drag with delay)
+  // Track if drawer should be forced open (during drag or manually opened)
   const [drawerForceOpen, setDrawerForceOpen] = useState(false);
+
+  // Track if drawer was manually closed by user (overrides auto-open for hidden panels)
+  const [drawerManuallyClosed, setDrawerManuallyClosed] = useState(false);
 
   // Timer ref for delayed drawer close
   const drawerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -102,8 +111,9 @@ export function PanelManagementProvider({
     };
   }, []);
 
-  // Drawer is open if: actively dragging, force open flag, or there are hidden panels
-  const isDrawerOpen = drawerForceOpen || hiddenPanelIds.length > 0;
+  // Drawer is open if: force open flag is set AND not manually closed
+  // OR if dragging (always show during drag)
+  const isDrawerOpen = drawerForceOpen && !drawerManuallyClosed;
 
   const onDragStart = useCallback(
     (panelId: string, source: 'grid' | 'drawer') => {
@@ -119,8 +129,9 @@ export function PanelManagementProvider({
         dragSource: source,
       });
 
-      // Force open drawer when drag starts
+      // Force open drawer when drag starts and clear manual close
       setDrawerForceOpen(true);
+      setDrawerManuallyClosed(false);
     },
     []
   );
@@ -155,7 +166,27 @@ export function PanelManagementProvider({
   const resetAll = useCallback(() => {
     resetVisibility();
     setDrawerForceOpen(false);
+    setDrawerManuallyClosed(false);
   }, [resetVisibility]);
+
+  // Drawer control functions
+  const openDrawer = useCallback(() => {
+    setDrawerForceOpen(true);
+    setDrawerManuallyClosed(false);
+  }, []);
+
+  const closeDrawer = useCallback(() => {
+    setDrawerManuallyClosed(true);
+  }, []);
+
+  const toggleDrawer = useCallback(() => {
+    if (isDrawerOpen) {
+      setDrawerManuallyClosed(true);
+    } else {
+      setDrawerForceOpen(true);
+      setDrawerManuallyClosed(false);
+    }
+  }, [isDrawerOpen]);
 
   // Memoize context value
   const value = useMemo<PanelManagementContextValue>(
@@ -176,6 +207,11 @@ export function PanelManagementProvider({
       onDragStart,
       onDragEnd,
 
+      // Drawer controls
+      openDrawer,
+      closeDrawer,
+      toggleDrawer,
+
       // Reset
       resetAll,
 
@@ -193,6 +229,9 @@ export function PanelManagementProvider({
       showPanel,
       onDragStart,
       onDragEnd,
+      openDrawer,
+      closeDrawer,
+      toggleDrawer,
       resetAll,
       getStoredPosition,
     ]
@@ -202,6 +241,7 @@ export function PanelManagementProvider({
     <DndProvider backend={HTML5Backend}>
       <PanelManagementContext.Provider value={value}>
         {children}
+        <PanelDragLayer />
       </PanelManagementContext.Provider>
     </DndProvider>
   );

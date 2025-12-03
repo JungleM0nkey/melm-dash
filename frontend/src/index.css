@@ -35,8 +35,8 @@ body {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(45, 45, 45, 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(45, 45, 45, 0.15) 1px, transparent 1px);
+    linear-gradient(rgba(60, 60, 60, 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60, 60, 60, 0.35) 1px, transparent 1px);
   background-size: 66px 66px; /* 50px row height + 16px margin */
   pointer-events: none;
   z-index: 0;
@@ -45,8 +45,8 @@ body {
 /* Enhanced grid visibility during drag */
 .dashboard-grid-area.is-dragging::before {
   background-image:
-    linear-gradient(rgba(128, 90, 213, 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(128, 90, 213, 0.12) 1px, transparent 1px);
+    linear-gradient(rgba(128, 90, 213, 0.25) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(128, 90, 213, 0.25) 1px, transparent 1px);
 }
 
 /* Ensure grid items are above the background */
@@ -186,6 +186,24 @@ body {
     transition: none !important;
     animation: none !important;
   }
+
+  .connection-indicator-glow {
+    animation: none !important;
+  }
+}
+
+/* Connection indicator slow glow animation */
+@keyframes connection-glow {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(72, 187, 120, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(72, 187, 120, 0.8);
+  }
+}
+
+.connection-indicator-glow {
+  animation: connection-glow 3s ease-in-out infinite;
 }
 
 /* Custom scrollbar */

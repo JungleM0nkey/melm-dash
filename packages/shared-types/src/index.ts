@@ -11,6 +11,7 @@
 export interface CpuMetrics {
   usage: number;
   cores: number;
+  physicalCores: number;
   model: string;
   speed: number;
 }

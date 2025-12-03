@@ -44,7 +44,7 @@ export function SystemResourcesPanel() {
         </Box>
         {cpu && (
           <Text fontSize="xs" color="fg.muted" mt={1}>
-            {cpu.model} • {cpu.cores} cores{cpu.speed > 0 ? ` @ ${cpu.speed.toFixed(2)} GHz` : ''}
+            {cpu.model} • {cpu.physicalCores > 0 ? `${cpu.physicalCores} cores / ` : ''}{cpu.cores} threads{cpu.speed > 0 ? ` @ ${cpu.speed.toFixed(2)} GHz` : ''}
           </Text>
         )}
       </Box>

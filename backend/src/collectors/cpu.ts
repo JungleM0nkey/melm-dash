@@ -13,6 +13,7 @@ export async function collectCpu(): Promise<CpuMetrics> {
   return {
     usage: Math.round(load.currentLoad * 10) / 10,
     cores: cpuInfo.cores,
+    physicalCores: cpuInfo.physicalCores,
     model: `${cpuInfo.manufacturer} ${cpuInfo.brand}`,
     speed: cpuInfo.speed,
   };

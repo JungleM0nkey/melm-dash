@@ -7,7 +7,6 @@ import {
   ModalFooter,
   ModalCloseButton,
   Button,
-  SimpleGrid,
   Box,
   Text,
   VStack,
@@ -16,11 +15,19 @@ import {
   Input,
   Image,
   IconButton,
-  Divider,
   Select,
+  Slider,
+  SliderTrack,
+  SliderFilledTrack,
+  SliderThumb,
+  Divider,
+  Grid,
+  GridItem,
+  Flex,
+  Tooltip,
 } from '@chakra-ui/react';
 import { useState, useRef, useMemo } from 'react';
-import { Upload, Trash2 } from 'lucide-react';
+import { Upload, Trash2, Clock, Palette, ImageIcon } from 'lucide-react';
 import type { LogoType, LogoSize } from '../../hooks/useLogoPreference';
 import { LOGO_SIZE_VALUES } from '../../hooks/useLogoPreference';
 import { DistroIcon } from '../panels/DistroIcon';
@@ -36,26 +43,28 @@ interface SettingsModalProps {
   currentSize: LogoSize;
   currentCustomLogo: string | null;
   currentTimezone: string;
-  onSave: (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string) => void;
+  currentCustomSizeValue: number;
+  onSave: (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string, customSizeValue: number) => void;
 }
 
-const LOGO_OPTIONS: Array<{ value: LogoType; label: string; span?: number }> = [
-  { value: 'melm', label: 'MELM', span: 2 },
-  { value: 'alpine', label: 'Alpine Linux' },
-  { value: 'arch', label: 'Arch Linux' },
+const LOGO_OPTIONS: Array<{ value: LogoType; label: string }> = [
+  { value: 'melm', label: 'MELM' },
+  { value: 'alpine', label: 'Alpine' },
+  { value: 'arch', label: 'Arch' },
   { value: 'centos', label: 'CentOS' },
   { value: 'debian', label: 'Debian' },
   { value: 'fedora', label: 'Fedora' },
-  { value: 'linux', label: 'Generic Linux' },
+  { value: 'linux', label: 'Linux' },
   { value: 'nixos', label: 'NixOS' },
   { value: 'opensuse', label: 'openSUSE' },
   { value: 'ubuntu', label: 'Ubuntu' },
 ];
 
-const SIZE_OPTIONS: Array<{ value: LogoSize; label: string }> = [
-  { value: 'small', label: 'Small' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'large', label: 'Large' },
+const SIZE_PRESETS: Array<{ value: Exclude<LogoSize, 'custom'>; label: string }> = [
+  { value: 'small', label: 'S' },
+  { value: 'medium', label: 'M' },
+  { value: 'large', label: 'L' },
+  { value: 'xlarge', label: 'XL' },
 ];
 
 const MAX_FILE_SIZE = 512 * 1024; // 512KB
@@ -65,8 +74,36 @@ interface SettingsContentProps {
   currentSize: LogoSize;
   currentCustomLogo: string | null;
   currentTimezone: string;
-  onSave: (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string) => void;
+  currentCustomSizeValue: number;
+  onSave: (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string, customSizeValue: number) => void;
   onCancel: () => void;
+}
+
+interface SettingSectionProps {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}
+
+function SettingSection({ icon, title, children }: SettingSectionProps) {
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+
+  return (
+    <Box
+      p={4}
+      borderRadius="lg"
+      borderWidth="1px"
+      borderColor={borderColor}
+    >
+      <HStack spacing={2} mb={4}>
+        <Box color="blue.400">{icon}</Box>
+        <Text color="fg.primary" fontSize="sm" fontWeight="semibold">
+          {title}
+        </Text>
+      </HStack>
+      {children}
+    </Box>
+  );
 }
 
 function SettingsContent({
@@ -74,6 +111,7 @@ function SettingsContent({
   currentSize,
   currentCustomLogo,
   currentTimezone,
+  currentCustomSizeValue,
   onSave,
   onCancel,
 }: SettingsContentProps) {
@@ -81,15 +119,15 @@ function SettingsContent({
   const [selectedSize, setSelectedSize] = useState<LogoSize>(currentSize);
   const [customLogoData, setCustomLogoData] = useState<string | null>(currentCustomLogo);
   const [selectedTimezone, setSelectedTimezone] = useState<string>(currentTimezone);
+  const [customSizeValue, setCustomSizeValue] = useState<number>(currentCustomSizeValue);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Get available timezones
   const timezones = useMemo(() => getAvailableTimezones(), []);
   const localTimezone = useMemo(() => getLocalTimezone(), []);
 
   const handleSave = () => {
-    onSave(selectedLogo, selectedSize, customLogoData, selectedTimezone);
+    onSave(selectedLogo, selectedSize, customLogoData, selectedTimezone, customSizeValue);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,212 +169,273 @@ function SettingsContent({
     }
   };
 
+  const handleSliderChange = (value: number) => {
+    setCustomSizeValue(value);
+    if (selectedSize !== 'custom') {
+      setSelectedSize('custom');
+    }
+  };
+
+  const handlePresetClick = (preset: Exclude<LogoSize, 'custom'>) => {
+    setSelectedSize(preset);
+    setCustomSizeValue(LOGO_SIZE_VALUES[preset]);
+  };
+
   const hasChanges =
     selectedLogo !== currentLogo ||
     selectedSize !== currentSize ||
     customLogoData !== currentCustomLogo ||
-    selectedTimezone !== currentTimezone;
+    selectedTimezone !== currentTimezone ||
+    customSizeValue !== currentCustomSizeValue;
 
-  const selectedBg = useColorModeValue('blue.100', 'blue.700');
+  const selectedBg = useColorModeValue('blue.50', 'blue.900');
   const selectedBorder = useColorModeValue('blue.500', 'blue.400');
-  const hoverBg = useColorModeValue('gray.100', 'gray.700');
+  const hoverBg = useColorModeValue('gray.50', 'gray.700');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const previewBg = useColorModeValue('gray.50', 'gray.800');
+
+  // Calculate current display size
+  const displaySize = selectedSize === 'custom' ? customSizeValue : LOGO_SIZE_VALUES[selectedSize];
 
   return (
     <>
-      <ModalHeader color="fg.primary">Settings</ModalHeader>
+      <ModalHeader color="fg.primary" pb={2}>Settings</ModalHeader>
       <ModalCloseButton color="fg.primary" />
 
       <ModalBody>
-        <VStack align="stretch" spacing={6}>
-          {/* Timezone Section */}
-          <Box>
-            <Text color="fg.primary" fontSize="sm" fontWeight="semibold" mb={3}>
-              Timezone
-            </Text>
-            <Text color="fg.secondary" fontSize="xs" mb={3}>
-              Select the timezone for displaying local time
-            </Text>
-            <Select
-              value={selectedTimezone}
-              onChange={(e) => setSelectedTimezone(e.target.value)}
-              size="sm"
-              maxW="350px"
-              color="fg.primary"
-              borderColor={borderColor}
-              _hover={{ borderColor: selectedBorder }}
-            >
-              <option value="auto">Auto ({localTimezone})</option>
-              {timezones
-                .filter((tz) => tz !== 'auto')
-                .map((tz) => (
-                  <option key={tz} value={tz}>
-                    {tz.replace(/_/g, ' ')}
-                  </option>
-                ))}
-            </Select>
-          </Box>
-
-          <Divider borderColor="border.primary" />
-
-          {/* Logo Size Section */}
-          <Box>
-            <Text color="fg.primary" fontSize="sm" fontWeight="semibold" mb={3}>
-              Logo Size
-            </Text>
-            <HStack spacing={3}>
-              {SIZE_OPTIONS.map(({ value, label }) => {
-                const isSelected = selectedSize === value;
-                return (
-                  <Button
-                    key={value}
-                    size="sm"
-                    variant={isSelected ? 'solid' : 'outline'}
-                    colorScheme={isSelected ? 'blue' : 'gray'}
-                    onClick={() => setSelectedSize(value)}
-                  >
-                    {label} ({LOGO_SIZE_VALUES[value]}px)
-                  </Button>
-                );
-              })}
-            </HStack>
-          </Box>
-
-          <Divider borderColor="border.primary" />
-
-          {/* Custom Logo Upload Section */}
-          <Box>
-            <Text color="fg.primary" fontSize="sm" fontWeight="semibold" mb={3}>
-              Custom Logo
-            </Text>
-            <HStack spacing={4} align="start">
-              <VStack spacing={2} align="start">
-                <Input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  display="none"
-                />
-                <Button
-                  leftIcon={<Upload size={16} />}
-                  size="sm"
-                  variant="outline"
-                  colorScheme="blue"
-                  onClick={() => fileInputRef.current?.click()}
+        <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
+          {/* Left Column: Logo Selection with Preview */}
+          <GridItem>
+            <SettingSection icon={<Palette size={18} />} title="Logo">
+              {/* Live Preview */}
+              <Box
+                bg={previewBg}
+                borderRadius="md"
+                p={4}
+                mb={4}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                minH="100px"
+              >
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  transition="all 0.2s"
                 >
-                  Upload Image
-                </Button>
-                <Text color="fg.muted" fontSize="xs">
-                  Max 512KB, PNG/JPG/SVG recommended
-                </Text>
-                {uploadError && (
-                  <Text color="red.400" fontSize="xs">
-                    {uploadError}
-                  </Text>
-                )}
-              </VStack>
-
-              {customLogoData && (
-                <HStack
-                  spacing={2}
-                  p={3}
-                  borderRadius="md"
-                  borderWidth="1px"
-                  borderColor={selectedLogo === 'custom' ? selectedBorder : borderColor}
-                  bg={selectedLogo === 'custom' ? selectedBg : 'transparent'}
-                >
-                  <Box
-                    as="button"
-                    onClick={() => setSelectedLogo('custom')}
-                    cursor="pointer"
-                  >
+                  {selectedLogo === 'custom' && customLogoData ? (
                     <Image
                       src={customLogoData}
-                      alt="Custom logo preview"
-                      boxSize="48px"
+                      alt="Custom logo"
+                      w={`${displaySize}px`}
+                      h={`${displaySize}px`}
                       objectFit="contain"
                       borderRadius="md"
                     />
-                  </Box>
-                  <IconButton
-                    aria-label="Remove custom logo"
-                    icon={<Trash2 size={14} />}
-                    size="xs"
-                    variant="ghost"
-                    colorScheme="red"
-                    onClick={handleRemoveCustomLogo}
-                  />
+                  ) : (
+                    <DistroIcon distro={selectedLogo} size={displaySize} />
+                  )}
+                </Box>
+              </Box>
+
+              {/* Size Control */}
+              <Box mb={4}>
+                <Flex justify="space-between" align="center" mb={2}>
+                  <Text color="fg.secondary" fontSize="xs">
+                    Size
+                  </Text>
+                  <Text color="fg.muted" fontSize="xs">
+                    {displaySize}px
+                  </Text>
+                </Flex>
+                <HStack spacing={2} mb={2}>
+                  {SIZE_PRESETS.map(({ value, label }) => {
+                    const isSelected = selectedSize === value;
+                    return (
+                      <Tooltip key={value} label={`${LOGO_SIZE_VALUES[value]}px`} hasArrow>
+                        <Button
+                          size="xs"
+                          minW="36px"
+                          variant={isSelected ? 'solid' : 'outline'}
+                          colorScheme={isSelected ? 'blue' : 'gray'}
+                          onClick={() => handlePresetClick(value)}
+                        >
+                          {label}
+                        </Button>
+                      </Tooltip>
+                    );
+                  })}
                 </HStack>
-              )}
-            </HStack>
-          </Box>
+                <Slider
+                  value={customSizeValue}
+                  onChange={handleSliderChange}
+                  min={16}
+                  max={96}
+                  step={4}
+                >
+                  <SliderTrack>
+                    <SliderFilledTrack bg="blue.400" />
+                  </SliderTrack>
+                  <SliderThumb boxSize={4} />
+                </Slider>
+              </Box>
 
-          <Divider borderColor="border.primary" />
+              <Divider my={3} />
 
-          {/* Preset Logos Section */}
-          <Box>
-            <Text color="fg.primary" fontSize="sm" fontWeight="semibold" mb={3}>
-              Preset Logos
-            </Text>
-            <Text color="fg.secondary" fontSize="xs" mb={3}>
-              Select a logo to display in the dashboard header
-            </Text>
-
-            <SimpleGrid columns={{ base: 2, sm: 3, md: 5 }} spacing={4}>
-              {LOGO_OPTIONS.map(({ value, label, span }) => {
-                const isSelected = selectedLogo === value;
-
-                return (
-                  <Box
-                    key={value}
-                    as="button"
-                    onClick={() => setSelectedLogo(value)}
-                    p={4}
-                    borderRadius="md"
-                    borderWidth="2px"
-                    borderColor={isSelected ? selectedBorder : borderColor}
-                    bg={isSelected ? selectedBg : 'transparent'}
-                    _hover={{
-                      bg: isSelected ? selectedBg : hoverBg,
-                      transform: 'scale(1.02)',
-                    }}
-                    transition="all 0.2s"
-                    cursor="pointer"
-                    position="relative"
-                    gridColumn={span ? `span ${span}` : undefined}
-                  >
-                    <VStack spacing={2}>
+              {/* Logo Grid */}
+              <Grid templateColumns="repeat(5, 1fr)" gap={2}>
+                {LOGO_OPTIONS.map(({ value, label }) => {
+                  const isSelected = selectedLogo === value;
+                  return (
+                    <Tooltip key={value} label={label} hasArrow placement="top">
                       <Box
+                        as="button"
+                        onClick={() => setSelectedLogo(value)}
+                        p={2}
+                        borderRadius="md"
+                        borderWidth="2px"
+                        borderColor={isSelected ? selectedBorder : 'transparent'}
+                        bg={isSelected ? selectedBg : 'transparent'}
+                        _hover={{ bg: isSelected ? selectedBg : hoverBg }}
+                        transition="all 0.15s"
+                        cursor="pointer"
                         display="flex"
                         alignItems="center"
                         justifyContent="center"
-                        height="48px"
                       >
-                        <DistroIcon distro={value} size={40} />
+                        <DistroIcon distro={value} size={28} />
                       </Box>
-                      <Text
-                        fontSize="xs"
-                        color={isSelected ? 'fg.primary' : 'fg.secondary'}
-                        fontWeight={isSelected ? 'semibold' : 'normal'}
-                        textAlign="center"
-                      >
-                        {label}
-                      </Text>
-                    </VStack>
-                  </Box>
-                );
-              })}
-            </SimpleGrid>
-          </Box>
-        </VStack>
+                    </Tooltip>
+                  );
+                })}
+              </Grid>
+            </SettingSection>
+          </GridItem>
+
+          {/* Right Column: Custom Logo & General Settings */}
+          <GridItem>
+            <VStack spacing={4} align="stretch">
+              {/* Custom Logo Upload */}
+              <SettingSection icon={<ImageIcon size={18} />} title="Custom Logo">
+                <VStack spacing={3} align="stretch">
+                  <Input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    display="none"
+                  />
+
+                  {customLogoData ? (
+                    <HStack
+                      spacing={3}
+                      p={3}
+                      borderRadius="md"
+                      bg={previewBg}
+                      justify="space-between"
+                    >
+                      <HStack spacing={3}>
+                        <Box
+                          as="button"
+                          onClick={() => setSelectedLogo('custom')}
+                          cursor="pointer"
+                          p={1}
+                          borderRadius="md"
+                          borderWidth="2px"
+                          borderColor={selectedLogo === 'custom' ? selectedBorder : 'transparent'}
+                        >
+                          <Image
+                            src={customLogoData}
+                            alt="Custom logo"
+                            boxSize="40px"
+                            objectFit="contain"
+                            borderRadius="sm"
+                          />
+                        </Box>
+                        <VStack align="start" spacing={0}>
+                          <Text color="fg.primary" fontSize="sm" fontWeight="medium">
+                            Custom Image
+                          </Text>
+                          <Text color="fg.muted" fontSize="xs">
+                            Click to select
+                          </Text>
+                        </VStack>
+                      </HStack>
+                      <HStack spacing={1}>
+                        <IconButton
+                          aria-label="Replace custom logo"
+                          icon={<Upload size={14} />}
+                          size="sm"
+                          variant="ghost"
+                          colorScheme="blue"
+                          onClick={() => fileInputRef.current?.click()}
+                        />
+                        <IconButton
+                          aria-label="Remove custom logo"
+                          icon={<Trash2 size={14} />}
+                          size="sm"
+                          variant="ghost"
+                          colorScheme="red"
+                          onClick={handleRemoveCustomLogo}
+                        />
+                      </HStack>
+                    </HStack>
+                  ) : (
+                    <Button
+                      leftIcon={<Upload size={16} />}
+                      size="sm"
+                      variant="outline"
+                      colorScheme="blue"
+                      onClick={() => fileInputRef.current?.click()}
+                      w="full"
+                    >
+                      Upload Custom Image
+                    </Button>
+                  )}
+
+                  {uploadError && (
+                    <Text color="red.400" fontSize="xs">
+                      {uploadError}
+                    </Text>
+                  )}
+
+                  <Text color="fg.muted" fontSize="xs">
+                    PNG, JPG, or SVG up to 512KB
+                  </Text>
+                </VStack>
+              </SettingSection>
+
+              {/* Timezone */}
+              <SettingSection icon={<Clock size={18} />} title="Timezone">
+                <Select
+                  value={selectedTimezone}
+                  onChange={(e) => setSelectedTimezone(e.target.value)}
+                  size="sm"
+                  color="fg.primary"
+                  borderColor={borderColor}
+                  _hover={{ borderColor: selectedBorder }}
+                >
+                  <option value="auto">Auto ({localTimezone})</option>
+                  {timezones
+                    .filter((tz) => tz !== 'auto')
+                    .map((tz) => (
+                      <option key={tz} value={tz}>
+                        {tz.replace(/_/g, ' ')}
+                      </option>
+                    ))}
+                </Select>
+              </SettingSection>
+            </VStack>
+          </GridItem>
+        </Grid>
       </ModalBody>
 
-      <ModalFooter>
-        <Button variant="ghost" mr={3} onClick={onCancel} color="fg.secondary">
+      <ModalFooter pt={4}>
+        <Button variant="ghost" mr={3} onClick={onCancel} color="fg.secondary" size="sm">
           Cancel
         </Button>
-        <Button colorScheme="blue" onClick={handleSave} isDisabled={!hasChanges}>
+        <Button colorScheme="blue" onClick={handleSave} isDisabled={!hasChanges} size="sm">
           Save Changes
         </Button>
       </ModalFooter>
@@ -351,15 +450,16 @@ export function SettingsModal({
   currentSize,
   currentCustomLogo,
   currentTimezone,
+  currentCustomSizeValue,
   onSave,
 }: SettingsModalProps) {
-  const handleSave = (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string) => {
-    onSave(logo, size, customLogo, timezone);
+  const handleSave = (logo: LogoType, size: LogoSize, customLogo: string | null, timezone: string, customSizeValue: number) => {
+    onSave(logo, size, customLogo, timezone, customSizeValue);
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl" isCentered>
+    <Modal isOpen={isOpen} onClose={onClose} size="3xl" isCentered>
       <ModalOverlay />
       <ModalContent bg="bg.panel" borderColor="border.primary" borderWidth="1px">
         {isOpen && (
@@ -368,6 +468,7 @@ export function SettingsModal({
             currentSize={currentSize}
             currentCustomLogo={currentCustomLogo}
             currentTimezone={currentTimezone}
+            currentCustomSizeValue={currentCustomSizeValue}
             onSave={handleSave}
             onCancel={onClose}
           />

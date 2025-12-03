@@ -7,8 +7,8 @@ import {
   Divider,
   Badge,
 } from '@chakra-ui/react';
-import { Info, Clock, Calendar, Container, type LucideIcon } from 'lucide-react';
-import { useSystemInfo } from '../../context/DashboardContext';
+import { Info, Clock, Calendar, Container, Cpu, type LucideIcon } from 'lucide-react';
+import { useSystemInfo, useCpu } from '../../context/DashboardContext';
 import { DistroIcon } from './DistroIcon';
 import {
   useTimezonePreference,
@@ -80,6 +80,7 @@ function getTimezoneAbbrev(timezone: string): string {
 
 export function SystemInfoPanel() {
   const system = useSystemInfo();
+  const { cpu } = useCpu();
   const [, , effectiveTimezone] = useTimezonePreference();
   const [currentTime, setCurrentTime] = useState<string>('');
 
@@ -139,6 +140,21 @@ export function SystemInfoPanel() {
         <InfoRow label="Kernel" value={system.kernel} />
         <InfoRow label="Packages" value={system.packages} />
       </Box>
+
+      <Divider borderColor="border.primary" />
+
+      {/* CPU Info */}
+      {cpu && (
+        <Box>
+          <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wider" mb={2}>
+            Processor
+          </Text>
+          <InfoRow label="CPU" value={cpu.model} icon={Cpu} />
+          {cpu.physicalCores > 0 && <InfoRow label="Cores" value={cpu.physicalCores} />}
+          <InfoRow label="Threads" value={cpu.cores} />
+          {cpu.speed > 0 && <InfoRow label="Speed" value={`${cpu.speed} GHz`} />}
+        </Box>
+      )}
 
       <Divider borderColor="border.primary" />
 

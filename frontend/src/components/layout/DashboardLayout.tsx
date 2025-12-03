@@ -12,6 +12,11 @@ import { WidgetErrorBoundary } from '../ErrorBoundary';
 import { PanelDrawer } from './PanelDrawer';
 import { usePanelManagement } from '../../context/PanelManagementContext';
 import { mergePanelLayout } from '../../types/panel';
+import {
+  useLogoSize,
+  useCustomSizeValue,
+  LOGO_SIZE_VALUES,
+} from '../../hooks/useLogoPreference';
 
 // Import panel components
 import { SystemResourcesPanel } from '../panels/SystemResourcesPanel';
@@ -138,7 +143,16 @@ export function DashboardLayout() {
     isDragging,
     isDrawerOpen,
     resetAll,
+    closeDrawer,
+    toggleDrawer,
   } = usePanelManagement();
+
+  // Get logo size for header height calculation
+  const [logoSize] = useLogoSize();
+  const [customSizeValue] = useCustomSizeValue();
+  const logoSizePixels = logoSize === 'custom' ? customSizeValue : LOGO_SIZE_VALUES[logoSize];
+  // Header height: logo container (logo + 8px padding) + py padding (24px) + border (1px)
+  const headerHeight = logoSizePixels + 8 + 24 + 1;
 
   // Debounce timer ref for layout storage
   const storageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -254,17 +268,18 @@ export function DashboardLayout() {
     [showPanel]
   );
 
-  // Handle drawer close (only when manually closed, not during drag)
+  // Handle drawer close
   const handleDrawerClose = useCallback(() => {
-    // Drawer will auto-close when there are no hidden panels
-    // This is handled by the context, so we don't need to do anything here
-  }, []);
+    closeDrawer();
+  }, [closeDrawer]);
 
   return (
     <Flex direction="column" minH="100vh" bg="bg.primary">
       <DashboardHeader
         onResetLayout={handleResetLayout}
         hiddenPanelCount={hiddenPanelIds.length}
+        onTogglePanelDrawer={toggleDrawer}
+        isDrawerOpen={isDrawerOpen}
       />
 
       <Box
@@ -315,6 +330,7 @@ export function DashboardLayout() {
         onRestorePanel={handleRestorePanel}
         onHidePanel={handleHidePanel}
         isDragging={isDragging}
+        headerHeight={headerHeight}
       />
     </Flex>
   );

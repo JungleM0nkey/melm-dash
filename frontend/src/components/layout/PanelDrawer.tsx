@@ -21,9 +21,12 @@ interface PanelDrawerProps {
   onHidePanel: (panelId: string) => void;
   /** Whether a panel is currently being dragged */
   isDragging: boolean;
+  /** Height of the header in pixels (drawer starts below this) */
+  headerHeight: number;
 }
 
 const MotionBox = motion.create(Box);
+const MotionOverlay = motion.create(Box);
 
 /**
  * Slide-out drawer for managing panel visibility.
@@ -36,28 +39,52 @@ export function PanelDrawer({
   onRestorePanel,
   onHidePanel,
   isDragging,
+  headerHeight,
 }: PanelDrawerProps) {
+  const topOffset = `${headerHeight}px`;
+
   return (
     <AnimatePresence>
       {isOpen && (
-        <MotionBox
-          position="fixed"
-          top={0}
-          right={0}
-          bottom={0}
-          w="280px"
-          bg="bg.panel"
-          borderLeftWidth="1px"
-          borderColor="border.primary"
-          zIndex={1000}
-          boxShadow="-4px 0 16px rgba(0, 0, 0, 0.3)"
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-          display="flex"
-          flexDirection="column"
-        >
+        <>
+          {/* Dark overlay - only covers dashboard area, not nav or drag preview */}
+          {!isDragging && (
+            <MotionOverlay
+              position="fixed"
+              top={topOffset}
+              left={0}
+              right={0}
+              bottom={0}
+              bg="blackAlpha.600"
+              zIndex={900}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={onClose}
+              cursor="pointer"
+            />
+          )}
+
+          {/* Drawer panel */}
+          <MotionBox
+            position="fixed"
+            top={topOffset}
+            left={0}
+            bottom={0}
+            w="280px"
+            bg="bg.panel"
+            borderRightWidth="1px"
+            borderColor="border.primary"
+            zIndex={1000}
+            boxShadow="4px 0 16px rgba(0, 0, 0, 0.3)"
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            display="flex"
+            flexDirection="column"
+          >
           {/* Header */}
           <Flex
             align="center"
@@ -128,6 +155,7 @@ export function PanelDrawer({
             ) : null}
           </Box>
         </MotionBox>
+        </>
       )}
     </AnimatePresence>
   );

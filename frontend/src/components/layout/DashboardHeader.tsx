@@ -10,12 +10,13 @@ import {
   Image,
   useDisclosure,
 } from '@chakra-ui/react';
-import { RotateCcw, Settings } from 'lucide-react';
+import { RotateCcw, Settings, LayoutGrid } from 'lucide-react';
 import { useConnectionStatus, useSystemInfo } from '../../context/DashboardContext';
 import {
   useLogoPreference,
   useLogoSize,
   useCustomLogo,
+  useCustomSizeValue,
   LOGO_SIZE_VALUES,
 } from '../../hooks/useLogoPreference';
 import type { LogoType, LogoSize } from '../../hooks/useLogoPreference';
@@ -27,14 +28,24 @@ interface DashboardHeaderProps {
   onResetLayout: () => void;
   /** Number of hidden panels (0 = none hidden) */
   hiddenPanelCount?: number;
+  /** Toggle the panel drawer */
+  onTogglePanelDrawer: () => void;
+  /** Whether the drawer is currently open */
+  isDrawerOpen: boolean;
 }
 
-export function DashboardHeader({ onResetLayout, hiddenPanelCount = 0 }: DashboardHeaderProps) {
+export function DashboardHeader({
+  onResetLayout,
+  hiddenPanelCount = 0,
+  onTogglePanelDrawer,
+  isDrawerOpen,
+}: DashboardHeaderProps) {
   const connectionStatus = useConnectionStatus();
   const systemInfo = useSystemInfo();
   const [logoPreference, setLogoPreference] = useLogoPreference();
   const [logoSize, setLogoSize] = useLogoSize();
   const [customLogo, setCustomLogo] = useCustomLogo();
+  const [customSizeValue, setCustomSizeValue] = useCustomSizeValue();
   const [timezonePreference, setTimezonePreference] = useTimezonePreference();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -52,14 +63,15 @@ export function DashboardHeader({ onResetLayout, hiddenPanelCount = 0 }: Dashboa
   };
   const statusText = statusTextMap[connectionStatus];
 
-  const handleSettingsSave = (logo: LogoType, size: LogoSize, customLogoData: string | null, timezone: string) => {
+  const handleSettingsSave = (logo: LogoType, size: LogoSize, customLogoData: string | null, timezone: string, customSize: number) => {
     setLogoPreference(logo);
     setLogoSize(size);
     setCustomLogo(customLogoData);
     setTimezonePreference(timezone);
+    setCustomSizeValue(customSize);
   };
 
-  const logoSizePixels = LOGO_SIZE_VALUES[logoSize];
+  const logoSizePixels = logoSize === 'custom' ? customSizeValue : LOGO_SIZE_VALUES[logoSize];
   // MELM logo container is wider to accommodate its aspect ratio
   const isMelm = logoPreference === 'melm';
   const containerWidth = isMelm ? `${logoSizePixels * 2 + 8}px` : `${logoSizePixels + 8}px`;
@@ -101,11 +113,23 @@ export function DashboardHeader({ onResetLayout, hiddenPanelCount = 0 }: Dashboa
             )}
           </Box>
 
-          {/* Title */}
+          {/* Title with connection indicator */}
           <Box>
-            <Heading size="md" color="fg.primary">
-              {systemInfo?.hostname || 'NixOS'} Dashboard
-            </Heading>
+            <HStack spacing={2}>
+              <Heading size="md" color="fg.primary">
+                {systemInfo?.hostname || 'NixOS'} Dashboard
+              </Heading>
+              <Tooltip label={statusText} hasArrow placement="right">
+                <Box
+                  w={2}
+                  h={2}
+                  borderRadius="full"
+                  bg={`${statusColor}.400`}
+                  className={connectionStatus === 'connected' ? 'connection-indicator-glow' : undefined}
+                  cursor="default"
+                />
+              </Tooltip>
+            </HStack>
             {systemInfo && (
               <Text fontSize="xs" color="fg.muted">
                 {systemInfo.os} • {systemInfo.kernel}
@@ -115,19 +139,6 @@ export function DashboardHeader({ onResetLayout, hiddenPanelCount = 0 }: Dashboa
         </HStack>
 
         <HStack spacing={4}>
-          {/* Connection status */}
-          <HStack spacing={2}>
-            <Box
-              w={2}
-              h={2}
-              borderRadius="full"
-              bg={`${statusColor}.400`}
-              boxShadow={connectionStatus === 'connected' ? `0 0 8px var(--chakra-colors-${statusColor}-400)` : undefined}
-            />
-            <Text fontSize="sm" color="fg.muted">
-              {statusText}
-            </Text>
-          </HStack>
 
           {/* System time */}
           {systemInfo?.currentTime && (
@@ -157,6 +168,17 @@ export function DashboardHeader({ onResetLayout, hiddenPanelCount = 0 }: Dashboa
 
           {/* Actions */}
           <HStack spacing={1}>
+            <Tooltip label={isDrawerOpen ? 'Close Panels' : 'Manage Panels'} hasArrow>
+              <IconButton
+                aria-label={isDrawerOpen ? 'Close panels drawer' : 'Open panels drawer'}
+                size="sm"
+                variant={isDrawerOpen ? 'solid' : 'ghost'}
+                colorScheme={isDrawerOpen ? 'purple' : 'gray'}
+                onClick={onTogglePanelDrawer}
+              >
+                <LayoutGrid size={16} />
+              </IconButton>
+            </Tooltip>
             <Tooltip label="Reset Layout" hasArrow>
               <IconButton
                 aria-label="Reset layout"
@@ -191,6 +213,7 @@ export function DashboardHeader({ onResetLayout, hiddenPanelCount = 0 }: Dashboa
         currentSize={logoSize}
         currentCustomLogo={customLogo}
         currentTimezone={timezonePreference}
+        currentCustomSizeValue={customSizeValue}
         onSave={handleSettingsSave}
       />
     </Box>

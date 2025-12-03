@@ -16,7 +16,10 @@
       "Bash(./node_modules/.bin/tsc:*)",
       "Bash(pnpm build:*)",
       "Bash(pnpm typecheck:*)",
-      "Bash(pnpm --filter @melm-dash/backend test)"
+      "Bash(pnpm --filter @melm-dash/backend test)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(pnpm --filter @melm-dash/shared-types build:*)"
     ],
     "deny": [],
     "ask": []

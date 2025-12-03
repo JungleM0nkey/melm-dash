@@ -13,6 +13,7 @@ describe('InMemoryMetricsRepository', () => {
     const mockCpuData: CpuMetrics = {
       usage: 45.5,
       cores: 8,
+      physicalCores: 4,
       model: 'Intel Core i7',
       speed: 3.2,
     };
@@ -89,7 +90,7 @@ describe('InMemoryMetricsRepository', () => {
       const smallRepo = new InMemoryMetricsRepository({ maxPoints: 3 });
 
       for (let i = 0; i < 5; i++) {
-        smallRepo.setCpu({ usage: i * 10, cores: 4, model: 'Test', speed: 2.0 });
+        smallRepo.setCpu({ usage: i * 10, cores: 4, physicalCores: 2, model: 'Test', speed: 2.0 });
       }
 
       const history = smallRepo.getCpuHistory();
@@ -103,7 +104,7 @@ describe('InMemoryMetricsRepository', () => {
 
   describe('Snapshot', () => {
     it('should return complete snapshot with all data', () => {
-      const cpuData: CpuMetrics = { usage: 50, cores: 4, model: 'Test CPU', speed: 2.5 };
+      const cpuData: CpuMetrics = { usage: 50, cores: 4, physicalCores: 2, model: 'Test CPU', speed: 2.5 };
       const memData: MemoryMetrics = { usage: 60, used: 8, total: 16, available: 8 };
 
       repository.setCpu(cpuData);
