@@ -1,18 +1,14 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # MELM-DASH Docker Image Build & Publish to GHCR
-# Triggers: Git tags (v*) and GitHub Releases
+# Triggers: GitHub Releases only (prevents duplicate builds from tag+release)
 # Registry: GitHub Container Registry (ghcr.io)
 # ═══════════════════════════════════════════════════════════════════════════
 
 name: Build and Publish Docker Image
 
 on:
-  # Trigger on version tags (e.g., v1.0.0, v2.1.3)
-  push:
-    tags:
-      - 'v*'
-
-  # Trigger on GitHub Release publication
+  # Trigger ONLY on GitHub Release publication (not on tag push)
+  # This prevents duplicate builds when creating a release with a new tag
   release:
     types: [published]
 
@@ -23,26 +19,83 @@ on:
         description: 'Docker image tag override (optional)'
         required: false
         type: string
+      skip_tests:
+        description: 'Skip tests (use with caution)'
+        required: false
+        type: boolean
+        default: false
 
-# Permissions required for GHCR and attestations
+# Cancel in-progress runs for the same release
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel release builds
+
+# Permissions required for GHCR, attestations, and signing
 permissions:
   contents: read
   packages: write
   id-token: write
   attestations: write
+  security-events: write  # For uploading Trivy SARIF
 
 # Global environment variables
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  PNPM_VERSION: '9.0.0'
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────────
-  # Job: Build and Push Docker Image
+  # Job: Validate Code Quality
+  # ───────────────────────────────────────────────────────────────────────────
+  validate:
+    name: Validate Code Quality
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_tests }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared-types
+        run: pnpm --filter @melm-dash/shared-types build
+
+      - name: Run linting
+        run: pnpm lint
+
+      - name: Run type checking
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Job: Build, Scan, Sign, and Push Docker Image
   # ───────────────────────────────────────────────────────────────────────────
   build-and-push:
-    name: Build and Push to GHCR
+    name: Build, Scan & Push
     runs-on: ubuntu-latest
+    needs: [validate]
+    # Run even if validate was skipped (workflow_dispatch with skip_tests)
+    if: ${{ always() && (needs.validate.result == 'success' || needs.validate.result == 'skipped') }}
+
+    outputs:
+      digest: ${{ steps.build-push.outputs.digest }}
+      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
     steps:
       # ─────────────────────────────────────────────────────────────────────
@@ -70,10 +123,15 @@ jobs:
           version: latest
           driver-opts: |
             network=host
-          buildkitd-flags: --debug
 
       # ─────────────────────────────────────────────────────────────────────
-      # Step 4: Login to GitHub Container Registry
+      # Step 4: Install Cosign for Image Signing
+      # ─────────────────────────────────────────────────────────────────────
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      # ─────────────────────────────────────────────────────────────────────
+      # Step 5: Login to GitHub Container Registry
       # ─────────────────────────────────────────────────────────────────────
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -83,7 +141,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # ─────────────────────────────────────────────────────────────────────
-      # Step 5: Extract Metadata (tags, labels)
+      # Step 6: Extract Metadata (tags, labels)
       # ─────────────────────────────────────────────────────────────────────
       - name: Extract Docker metadata
         id: meta
@@ -91,28 +149,72 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # Semantic versioning tags
+            # Semantic versioning tags from release tag
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
-            # Latest tag for default branch
-            type=raw,value=latest,enable={{is_default_branch}}
+            # Latest tag for releases (always apply on release events)
+            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
             # SHA tag for traceability
             type=sha,prefix=sha-,format=short
             # Custom tag from workflow dispatch
             type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
           labels: |
             org.opencontainers.image.title=MELM-DASH
-            org.opencontainers.image.description=NixOS System Monitoring Dashboard
+            org.opencontainers.image.description=Linux System Monitoring Dashboard
             org.opencontainers.image.vendor=m0nkey
+            org.opencontainers.image.licenses=MIT
             maintainer=m0nkey
-          flavor: |
-            latest=auto
-            prefix=
-            suffix=
 
       # ─────────────────────────────────────────────────────────────────────
-      # Step 6: Build and Push Docker Image
+      # Step 7: Build Docker Image (local, for scanning)
+      # ─────────────────────────────────────────────────────────────────────
+      - name: Build Docker image for scanning
+        id: build-local
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64  # Single platform for faster scan
+          push: false
+          load: true  # Load into local Docker daemon
+          tags: ${{ env.IMAGE_NAME }}:scan
+          cache-from: type=gha
+          build-args: |
+            BUILD_DATE=${{ github.event.release.created_at || github.event.repository.updated_at }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ github.ref_name }}
+
+      # ─────────────────────────────────────────────────────────────────────
+      # Step 8: Security Scan with Trivy (BEFORE push)
+      # ─────────────────────────────────────────────────────────────────────
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:scan
+          format: 'table'
+          exit-code: '1'  # Fail on CRITICAL vulnerabilities
+          severity: 'CRITICAL'
+          ignore-unfixed: true
+
+      - name: Run Trivy for SARIF report
+        uses: aquasecurity/trivy-action@master
+        if: always()
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:scan
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'container-security'
+
+      # ─────────────────────────────────────────────────────────────────────
+      # Step 9: Build and Push Multi-Platform Image
       # ─────────────────────────────────────────────────────────────────────
       - name: Build and push Docker image
         id: build-push
@@ -124,20 +226,32 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Layer caching for faster builds
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          # Build arguments
           build-args: |
-            BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+            BUILD_DATE=${{ github.event.release.created_at || github.event.repository.updated_at }}
             VCS_REF=${{ github.sha }}
-            VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
-          # Enable provenance and SBOM attestations
+            VERSION=${{ github.ref_name }}
           provenance: true
           sbom: true
 
       # ─────────────────────────────────────────────────────────────────────
-      # Step 7: Generate Artifact Attestation
+      # Step 10: Sign the Image with Cosign (Keyless)
+      # ─────────────────────────────────────────────────────────────────────
+      - name: Sign image with Cosign
+        env:
+          DIGEST: ${{ steps.build-push.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          echo "Signing image..."
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
+          cosign sign --yes ${images}
+
+      # ─────────────────────────────────────────────────────────────────────
+      # Step 11: Generate Artifact Attestation
       # ─────────────────────────────────────────────────────────────────────
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
@@ -147,29 +261,7 @@ jobs:
           push-to-registry: true
 
       # ─────────────────────────────────────────────────────────────────────
-      # Step 8: Security Scan with Trivy
-      # ─────────────────────────────────────────────────────────────────────
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build-push.outputs.digest }}
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '0'  # Don't fail on vulnerabilities (report only)
-
-      # ─────────────────────────────────────────────────────────────────────
-      # Step 9: Upload Trivy Results to GitHub Security
-      # ─────────────────────────────────────────────────────────────────────
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-          category: 'container-security'
-
-      # ─────────────────────────────────────────────────────────────────────
-      # Step 10: Output Image Information
+      # Step 12: Output Image Information
       # ─────────────────────────────────────────────────────────────────────
       - name: Output image details
         run: |
@@ -189,14 +281,17 @@ jobs:
           echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### ✅ Build Metadata:" >> $GITHUB_STEP_SUMMARY
+          echo "#### ✅ Security & Build Info:" >> $GITHUB_STEP_SUMMARY
           echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+          echo "- **Signed:** Yes (Cosign keyless)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Scanned:** Yes (Trivy - passed CRITICAL check)" >> $GITHUB_STEP_SUMMARY
+          echo "- **SBOM:** Yes (attached to image)" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Time:** $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
           echo "- **Git SHA:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Workflow Run:** [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
 
   # ───────────────────────────────────────────────────────────────────────────
-  # Job: Create Release Notes (Optional)
+  # Job: Update Release Notes
   # ───────────────────────────────────────────────────────────────────────────
   release-notes:
     name: Update Release Notes
@@ -214,13 +309,23 @@ jobs:
           append_body: true
           body: |
 
+            ---
+
             ## 🐳 Docker Image
 
-            **GHCR:** `ghcr.io/${{ github.repository }}`
+            **GHCR:** `ghcr.io/${{ github.repository }}:${{ github.ref_name }}`
 
             ```bash
             # Pull the image
             docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+
+            # Or pull latest
+            docker pull ghcr.io/${{ github.repository }}:latest
+
+            # Verify signature
+            cosign verify ghcr.io/${{ github.repository }}:${{ github.ref_name }} \
+              --certificate-identity-regexp="https://github.com/${{ github.repository }}/*" \
+              --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
 
             # Run with docker-compose
             docker compose up -d
@@ -235,4 +340,53 @@ jobs:
             ```
 
             **Platforms:** linux/amd64, linux/arm64
-            **Security:** Scanned with Trivy, signed with provenance attestation
+            **Security:** Trivy scanned, Cosign signed, provenance attestation
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Job: Notify on Failure
+  # ───────────────────────────────────────────────────────────────────────────
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [validate, build-and-push]
+    if: failure()
+
+    steps:
+      - name: Create failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 Docker publish failed for ${context.ref}`;
+            const body = `
+            ## Docker Publish Workflow Failed
+
+            **Workflow Run:** [#${context.runNumber}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            **Ref:** \`${context.ref}\`
+            **SHA:** \`${context.sha}\`
+            **Triggered by:** ${context.actor}
+
+            ### Next Steps
+            1. Check the [workflow logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            2. Fix the issue and re-run the workflow or create a new release
+            3. If this was a security scan failure, review the Trivy results in the Security tab
+
+            ### Rollback (if needed)
+            If a bad image was published before failure:
+            \`\`\`bash
+            # Delete the bad tag (requires admin)
+            gh api -X DELETE /user/packages/container/${context.repo.repo}/versions/<version_id>
+
+            # Or retag a known good version as latest
+            docker pull ghcr.io/${context.repo.owner}/${context.repo.repo}:<known-good-tag>
+            docker tag ghcr.io/${context.repo.owner}/${context.repo.repo}:<known-good-tag> ghcr.io/${context.repo.owner}/${context.repo.repo}:latest
+            docker push ghcr.io/${context.repo.owner}/${context.repo.repo}:latest
+            \`\`\`
+            `;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['bug', 'ci/cd']
+            });

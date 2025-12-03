@@ -13,7 +13,7 @@ export type LogoType =
   | 'ubuntu'
   | 'custom';
 
-export type LogoSize = 'small' | 'medium' | 'large';
+export type LogoSize = 'small' | 'medium' | 'large' | 'xlarge' | 'custom';
 
 export interface LogoSettings {
   logo: LogoType;
@@ -24,16 +24,21 @@ export interface LogoSettings {
 const LOGO_STORAGE_KEY = 'melm-dash-logo-preference';
 const LOGO_SIZE_STORAGE_KEY = 'melm-dash-logo-size';
 const CUSTOM_LOGO_STORAGE_KEY = 'melm-dash-custom-logo';
+const CUSTOM_SIZE_STORAGE_KEY = 'melm-dash-custom-size';
 
 const DEFAULT_LOGO: LogoType = 'melm';
 const DEFAULT_SIZE: LogoSize = 'medium';
 
-// Size mappings in pixels
-export const LOGO_SIZE_VALUES: Record<LogoSize, number> = {
+// Size mappings in pixels (custom uses a separate stored value)
+export const LOGO_SIZE_VALUES: Record<Exclude<LogoSize, 'custom'>, number> = {
   small: 32,
   medium: 40,
   large: 56,
+  xlarge: 72,
 };
+
+// Default custom size when first switching to custom
+export const DEFAULT_CUSTOM_SIZE = 48;
 
 function getLogoPreference(): LogoType {
   try {
@@ -68,6 +73,21 @@ function getCustomLogo(): string | null {
   return null;
 }
 
+function getCustomSizeValue(): number {
+  try {
+    const stored = localStorage.getItem(CUSTOM_SIZE_STORAGE_KEY);
+    if (stored) {
+      const parsed = parseInt(stored, 10);
+      if (!isNaN(parsed) && parsed >= 16 && parsed <= 128) {
+        return parsed;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to read custom size:', error);
+  }
+  return DEFAULT_CUSTOM_SIZE;
+}
+
 function setLogoPreference(logo: LogoType): void {
   try {
     localStorage.setItem(LOGO_STORAGE_KEY, logo);
@@ -96,6 +116,14 @@ function setCustomLogoData(data: string | null): void {
   }
 }
 
+function setCustomSizeValue(size: number): void {
+  try {
+    localStorage.setItem(CUSTOM_SIZE_STORAGE_KEY, String(size));
+  } catch (error) {
+    console.error('Failed to save custom size:', error);
+  }
+}
+
 function isValidLogoType(value: string): value is LogoType {
   const validLogos: LogoType[] = [
     'melm', 'alpine', 'arch', 'centos', 'debian',
@@ -105,7 +133,7 @@ function isValidLogoType(value: string): value is LogoType {
 }
 
 function isValidLogoSize(value: string): value is LogoSize {
-  return ['small', 'medium', 'large'].includes(value);
+  return ['small', 'medium', 'large', 'xlarge', 'custom'].includes(value);
 }
 
 export function useLogoPreference(): [LogoType, (logo: LogoType) => void] {
@@ -173,4 +201,31 @@ export function useCustomLogo(): [string | null, (data: string | null) => void] 
   }, []);
 
   return [customLogo, updateCustomLogo];
+}
+
+export function useCustomSizeValue(): [number, (size: number) => void] {
+  const [customSize, setCustomSizeState] = useState<number>(getCustomSizeValue);
+
+  const updateCustomSize = useCallback((size: number) => {
+    // Clamp between 16 and 128
+    const clampedSize = Math.max(16, Math.min(128, size));
+    setCustomSizeValue(clampedSize);
+    setCustomSizeState(clampedSize);
+  }, []);
+
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === CUSTOM_SIZE_STORAGE_KEY && e.newValue) {
+        const parsed = parseInt(e.newValue, 10);
+        if (!isNaN(parsed) && parsed >= 16 && parsed <= 128) {
+          setCustomSizeState(parsed);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  return [customSize, updateCustomSize];
 }

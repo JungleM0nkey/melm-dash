@@ -21,8 +21,37 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0d0d0d;
-  color: #f5f5f5;
+  /* Colors handled by Chakra UI theme */
+}
+
+/* Dashboard grid background pattern */
+.dashboard-grid-area {
+  position: relative;
+}
+
+.dashboard-grid-area::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--chakra-colors-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--chakra-colors-grid-line) 1px, transparent 1px);
+  background-size: 66px 66px; /* 50px row height + 16px margin */
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Enhanced grid visibility during drag */
+.dashboard-grid-area.is-dragging::before {
+  background-image:
+    linear-gradient(var(--chakra-colors-grid-lineDrag) 1px, transparent 1px),
+    linear-gradient(90deg, var(--chakra-colors-grid-lineDrag) 1px, transparent 1px);
+}
+
+/* Ensure grid items are above the background */
+.dashboard-grid-area .react-grid-layout {
+  position: relative;
+  z-index: 1;
 }
 
 /* React Grid Layout styles */
@@ -56,8 +85,7 @@ body {
 }
 
 .react-grid-item.react-grid-placeholder {
-  background: #805AD5;
-  opacity: 0.2;
+  background: var(--chakra-colors-grid-placeholder);
   transition-duration: 100ms;
   z-index: 2;
   border-radius: 8px;
@@ -77,8 +105,9 @@ body {
   bottom: 3px;
   width: 8px;
   height: 8px;
-  border-right: 2px solid rgba(160, 160, 160, 0.4);
-  border-bottom: 2px solid rgba(160, 160, 160, 0.4);
+  border-right: 2px solid var(--chakra-colors-border-hover);
+  border-bottom: 2px solid var(--chakra-colors-border-hover);
+  opacity: 0.6;
 }
 
 .react-resizable-handle-sw {
@@ -142,6 +171,42 @@ body {
   transform: rotate(45deg);
 }
 
+/* Chart animation optimizations */
+.recharts-area-area,
+.recharts-area-curve {
+  will-change: d;
+  transform: translateZ(0);
+}
+
+/* Respect reduced motion preference for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .recharts-area-area,
+  .recharts-area-curve {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .connection-indicator-glow {
+    animation: none !important;
+  }
+}
+
+/* Connection indicator slow glow animation */
+@keyframes connection-glow {
+  0%, 100% {
+    box-shadow: 0 0 4px var(--chakra-colors-status-running);
+    opacity: 0.4;
+  }
+  50% {
+    box-shadow: 0 0 12px var(--chakra-colors-status-running);
+    opacity: 0.8;
+  }
+}
+
+.connection-indicator-glow {
+  animation: connection-glow 3s ease-in-out infinite;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -149,14 +214,14 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0d0d0d;
+  background: var(--chakra-colors-bg-primary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2d2d2d;
+  background: var(--chakra-colors-border-primary);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3d3d3d;
+  background: var(--chakra-colors-border-hover);
 }

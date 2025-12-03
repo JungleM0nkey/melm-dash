@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   VStack,
@@ -7,22 +7,14 @@ import {
   Divider,
   Badge,
 } from '@chakra-ui/react';
-import { Info, Clock, Calendar, Container, type LucideIcon } from 'lucide-react';
-import { useSystemInfo } from '../../context/DashboardContext';
+import { Info, Clock, Calendar, Container, Cpu, type LucideIcon } from 'lucide-react';
+import { useSystemInfo, useCpu } from '../../context/DashboardContext';
 import { DistroIcon } from './DistroIcon';
-
-function formatUptime(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  const parts = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
-
-  return parts.join(' ');
-}
+import {
+  useTimezonePreference,
+  formatTimeForDisplay,
+} from '../../hooks/useTimezonePreference';
+import { formatUptime } from '../../utils/formatters';
 
 interface InfoRowProps {
   label: string;
@@ -63,15 +55,55 @@ function InfoRow({ label, value, icon }: InfoRowProps) {
           {label}
         </Text>
       </HStack>
-      <Text fontSize="sm" fontWeight="medium" textAlign="right">
+      <Box fontSize="sm" fontWeight="medium" textAlign="right">
         {value ?? '-'}
-      </Text>
+      </Box>
     </HStack>
   );
 }
 
+// Format timezone for display (e.g., "America/New_York" -> "EST" or "EDT")
+function getTimezoneAbbrev(timezone: string): string {
+  try {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'short',
+    });
+    const parts = formatter.formatToParts(now);
+    const tzPart = parts.find(p => p.type === 'timeZoneName');
+    return tzPart?.value || timezone;
+  } catch {
+    return timezone;
+  }
+}
+
 export function SystemInfoPanel() {
   const system = useSystemInfo();
+  const { cpu } = useCpu();
+  const [, , effectiveTimezone] = useTimezonePreference();
+  const [currentTime, setCurrentTime] = useState<string>('');
+
+  // Update time every second for live display
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const formatted = formatTimeForDisplay(now.toISOString(), effectiveTimezone, {
+        includeSeconds: true,
+        use24Hour: true,
+      });
+      setCurrentTime(formatted);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, [effectiveTimezone]);
+
+  // Get timezone abbreviation
+  const timezoneDisplay = useMemo(() => {
+    return getTimezoneAbbrev(effectiveTimezone);
+  }, [effectiveTimezone]);
 
   if (!system) {
     return (
@@ -111,6 +143,21 @@ export function SystemInfoPanel() {
 
       <Divider borderColor="border.primary" />
 
+      {/* CPU Info */}
+      {cpu && (
+        <Box>
+          <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wider" mb={2}>
+            Processor
+          </Text>
+          <InfoRow label="CPU" value={cpu.model} icon={Cpu} />
+          {cpu.physicalCores > 0 && <InfoRow label="Cores" value={cpu.physicalCores} />}
+          <InfoRow label="Threads" value={cpu.cores} />
+          {cpu.speed > 0 && <InfoRow label="Speed" value={`${cpu.speed} GHz`} />}
+        </Box>
+      )}
+
+      <Divider borderColor="border.primary" />
+
       {/* Time Info */}
       <Box>
         <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wider" mb={2}>
@@ -118,8 +165,25 @@ export function SystemInfoPanel() {
         </Text>
         <InfoRow label="Uptime" value={formatUptime(system.uptime)} icon={Clock} />
         <InfoRow label="Location" value={system.location} />
-        <InfoRow label="Timezone" value={system.timezone} icon={Calendar} />
-        <InfoRow label="Local Time" value={system.currentTime} />
+        <InfoRow
+          label="Timezone"
+          value={
+            <HStack spacing={1}>
+              <Text fontSize="sm" fontWeight="medium">{timezoneDisplay}</Text>
+              <Text fontSize="xs" color="fg.muted">({effectiveTimezone.split('/').pop()?.replace(/_/g, ' ')})</Text>
+            </HStack>
+          }
+          icon={Calendar}
+        />
+        <InfoRow
+          label="Local Time"
+          value={
+            <Text fontSize="sm" fontWeight="medium" fontFamily="mono">
+              {currentTime}
+            </Text>
+          }
+          icon={Clock}
+        />
       </Box>
     </VStack>
   );

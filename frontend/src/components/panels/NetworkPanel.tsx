@@ -11,14 +11,7 @@ import {
 } from '@chakra-ui/react';
 import { useNetwork } from '../../context/DashboardContext';
 import { NetworkChart } from '../charts/NetworkChart';
-
-function formatSpeed(bytesPerSec: number): string {
-  if (bytesPerSec === 0) return '0 B/s';
-  const k = 1024;
-  const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
-  const i = Math.min(Math.max(Math.floor(Math.log(bytesPerSec) / Math.log(k)), 0), sizes.length - 1);
-  return parseFloat((bytesPerSec / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
+import { formatSpeed } from '../../utils/formatters';
 
 export function NetworkPanel() {
   const { network, history } = useNetwork();
@@ -76,6 +69,15 @@ export function NetworkPanel() {
                     >
                       {iface.status}
                     </Badge>
+                    {iface.connectionMode && (
+                      <Badge
+                        colorScheme="blue"
+                        fontSize="xs"
+                        variant="outline"
+                      >
+                        {iface.connectionMode}
+                      </Badge>
+                    )}
                   </HStack>
                   <Text fontSize="xs" color="fg.muted">
                     {iface.type}

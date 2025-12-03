@@ -1,4 +1,11 @@
 # =============================================================================
+# Build Arguments (passed from CI/CD)
+# =============================================================================
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+
+# =============================================================================
 # Stage 1: Base - pnpm and system utilities
 # =============================================================================
 FROM node:22-alpine AS base
@@ -65,6 +72,21 @@ RUN pnpm install --frozen-lockfile --prod
 # Stage 7: Production runtime
 # =============================================================================
 FROM node:22-alpine AS production
+
+# Re-declare ARGs for this stage (ARGs don't persist across FROM)
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+
+# OCI Image Labels (https://github.com/opencontainers/image-spec/blob/main/annotations.md)
+LABEL org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.title="MELM-DASH" \
+      org.opencontainers.image.description="Linux System Monitoring Dashboard" \
+      org.opencontainers.image.vendor="m0nkey" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.source="https://github.com/m0nkey/melm-dash"
 
 RUN apk add --no-cache iproute2 procps dumb-init
 

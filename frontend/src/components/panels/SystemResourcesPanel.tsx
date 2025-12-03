@@ -8,18 +8,17 @@ import {
   StatLabel,
   StatNumber,
   SimpleGrid,
+  useToken,
 } from '@chakra-ui/react';
 import { useCpu, useMemory } from '../../context/DashboardContext';
 import { AreaSparkline } from '../charts/AreaSparkline';
 
-function formatBytes(bytes: number): string {
-  const gb = bytes / (1024 * 1024 * 1024);
-  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
-}
-
 export function SystemResourcesPanel() {
   const { cpu, history: cpuHistory } = useCpu();
   const { memory, history: memoryHistory } = useMemory();
+
+  // Get theme-aware chart colors
+  const [cpuColor, ramColor] = useToken('colors', ['chart.cpuLine', 'chart.ramLine']);
 
   return (
     <VStack spacing={4} align="stretch" h="100%">
@@ -45,11 +44,11 @@ export function SystemResourcesPanel() {
           }}
         />
         <Box mt={2}>
-          <AreaSparkline data={cpuHistory} color="#805AD5" height={50} />
+          <AreaSparkline data={cpuHistory} color={cpuColor} height={50} />
         </Box>
         {cpu && (
           <Text fontSize="xs" color="fg.muted" mt={1}>
-            {cpu.model} • {cpu.cores} cores{cpu.speed > 0 ? ` @ ${cpu.speed.toFixed(2)} GHz` : ''}
+            {cpu.model} • {cpu.physicalCores > 0 ? `${cpu.physicalCores} cores / ` : ''}{cpu.cores} threads{cpu.speed > 0 ? ` @ ${cpu.speed.toFixed(2)} GHz` : ''}
           </Text>
         )}
       </Box>
@@ -76,7 +75,7 @@ export function SystemResourcesPanel() {
           }}
         />
         <Box mt={2}>
-          <AreaSparkline data={memoryHistory} color="#38B2AC" height={50} />
+          <AreaSparkline data={memoryHistory} color={ramColor} height={50} />
         </Box>
         {memory && (
           <SimpleGrid columns={3} spacing={2} mt={2}>

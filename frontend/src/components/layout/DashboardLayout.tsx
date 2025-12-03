@@ -1,8 +1,23 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { Responsive, WidthProvider, type Layout, type Layouts } from 'react-grid-layout';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import {
+  Responsive,
+  WidthProvider,
+  type Layout,
+  type Layouts,
+} from 'react-grid-layout';
 import { Box, Flex } from '@chakra-ui/react';
 import { DashboardHeader } from './DashboardHeader';
-import { PanelWrapper } from './PanelWrapper';
+import { DraggablePanelWrapper } from './DraggablePanelWrapper';
+import { WidgetErrorBoundary } from '../ErrorBoundary';
+import { PanelDrawer } from './PanelDrawer';
+import { usePanelManagement } from '../../context/PanelManagementContext';
+import { mergePanelLayout } from '../../types/panel';
+import {
+  useLogoSize,
+  useCustomSizeValue,
+  LOGO_SIZE_VALUES,
+} from '../../hooks/useLogoPreference';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 // Import panel components
 import { SystemResourcesPanel } from '../panels/SystemResourcesPanel';
@@ -25,8 +40,16 @@ interface PanelConfig {
 }
 
 const panels: PanelConfig[] = [
-  { id: 'resources', title: 'System Resources', component: SystemResourcesPanel },
-  { id: 'docker', title: 'Docker Containers', component: DockerContainersPanel },
+  {
+    id: 'resources',
+    title: 'System Resources',
+    component: SystemResourcesPanel,
+  },
+  {
+    id: 'docker',
+    title: 'Docker Containers',
+    component: DockerContainersPanel,
+  },
   { id: 'ports', title: 'Listening Ports', component: ListeningPortsPanel },
   { id: 'storage', title: 'Storage Drives', component: StorageDrivesPanel },
   { id: 'system', title: 'System Information', component: SystemInfoPanel },
@@ -98,8 +121,9 @@ function storeLayoutsAsync(layouts: Layouts): void {
 
   // Use requestIdleCallback for non-blocking storage when browser is idle
   if ('requestIdleCallback' in window) {
-    (window as unknown as { requestIdleCallback: (cb: () => void) => void })
-      .requestIdleCallback(store);
+    (
+      window as unknown as { requestIdleCallback: (cb: () => void) => void }
+    ).requestIdleCallback(store);
   } else {
     // Fallback: schedule after current event loop
     setTimeout(store, 0);
@@ -107,9 +131,32 @@ function storeLayoutsAsync(layouts: Layouts): void {
 }
 
 export function DashboardLayout() {
+  // Update document title and favicon based on connection status
+  useDocumentTitle();
+
   const [layouts, setLayouts] = useState<Layouts>(() => {
     return getStoredLayouts() || defaultLayouts;
   });
+
+  // Panel management context
+  const {
+    visiblePanelIds,
+    hiddenPanelIds,
+    hidePanel,
+    showPanel,
+    isDragging,
+    isDrawerOpen,
+    resetAll,
+    closeDrawer,
+    toggleDrawer,
+  } = usePanelManagement();
+
+  // Get logo size for header height calculation
+  const [logoSize] = useLogoSize();
+  const [customSizeValue] = useCustomSizeValue();
+  const logoSizePixels = logoSize === 'custom' ? customSizeValue : LOGO_SIZE_VALUES[logoSize];
+  // Header height: logo container (logo + 8px padding) + py padding (24px) + border (1px)
+  const headerHeight = logoSizePixels + 8 + 24 + 1;
 
   // Debounce timer ref for layout storage
   const storageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -123,35 +170,131 @@ export function DashboardLayout() {
     };
   }, []);
 
+  // Filter visible panels
+  const visiblePanelConfigs = useMemo(
+    () => panels.filter((p) => visiblePanelIds.includes(p.id)),
+    [visiblePanelIds]
+  );
+
+  // Get hidden panels info for the drawer
+  const hiddenPanelConfigs = useMemo(
+    () =>
+      panels
+        .filter((p) => hiddenPanelIds.includes(p.id))
+        .map((p) => ({ id: p.id, title: p.title })),
+    [hiddenPanelIds]
+  );
+
+  // Filter layouts to only include visible panels
+  const filteredLayouts = useMemo(() => {
+    const result: Layouts = {};
+    for (const [breakpoint, layoutItems] of Object.entries(layouts)) {
+      result[breakpoint] = layoutItems.filter((item) =>
+        visiblePanelIds.includes(item.i)
+      );
+    }
+    return result;
+  }, [layouts, visiblePanelIds]);
+
   const handleLayoutChange = useCallback(
     (_currentLayout: Layout[], allLayouts: Layouts) => {
-      setLayouts(allLayouts);
+      // Merge with existing layouts (preserve positions of hidden panels)
+      setLayouts((prev) => {
+        const merged: Layouts = {};
+        for (const [breakpoint, newItems] of Object.entries(allLayouts)) {
+          // Keep existing layout items for hidden panels
+          const hiddenItems = prev[breakpoint]?.filter(
+            (item) => !visiblePanelIds.includes(item.i)
+          ) || [];
+          merged[breakpoint] = [...newItems, ...hiddenItems];
+        }
+        return merged;
+      });
 
       // Debounce storage to avoid blocking during rapid drag operations
       if (storageTimerRef.current) {
         clearTimeout(storageTimerRef.current);
       }
       storageTimerRef.current = setTimeout(() => {
-        storeLayoutsAsync(allLayouts);
+        // Store the full layouts including hidden panels
+        setLayouts((current) => {
+          storeLayoutsAsync(current);
+          return current;
+        });
       }, STORAGE_DEBOUNCE_MS);
     },
-    []
+    [visiblePanelIds]
   );
 
   const handleResetLayout = useCallback(() => {
     setLayouts(defaultLayouts);
+    resetAll(); // Also reset panel visibility
     // Immediate storage for explicit user action
     storeLayoutsAsync(defaultLayouts);
-  }, []);
+  }, [resetAll]);
+
+  // Handle hiding a panel (dropped on drawer)
+  const handleHidePanel = useCallback(
+    (panelId: string) => {
+      hidePanel(panelId, layouts);
+    },
+    [hidePanel, layouts]
+  );
+
+  // Handle restoring a panel (clicked in drawer)
+  const handleRestorePanel = useCallback(
+    (panelId: string) => {
+      const storedPosition = showPanel(panelId);
+
+      if (storedPosition) {
+        // Restore to stored position
+        setLayouts((prev) =>
+          mergePanelLayout(panelId, storedPosition, prev, defaultLayouts)
+        );
+      } else {
+        // Fall back to default position
+        setLayouts((prev) => {
+          const result: Layouts = {};
+          for (const [breakpoint, layoutItems] of Object.entries(prev)) {
+            const defaultLayout = defaultLayouts[breakpoint]?.find(
+              (l) => l.i === panelId
+            );
+            if (defaultLayout) {
+              result[breakpoint] = [...layoutItems, { ...defaultLayout }];
+            } else {
+              result[breakpoint] = layoutItems;
+            }
+          }
+          return result;
+        });
+      }
+    },
+    [showPanel]
+  );
+
+  // Handle drawer close
+  const handleDrawerClose = useCallback(() => {
+    closeDrawer();
+  }, [closeDrawer]);
 
   return (
     <Flex direction="column" minH="100vh" bg="bg.primary">
-      <DashboardHeader onResetLayout={handleResetLayout} />
+      <DashboardHeader
+        onResetLayout={handleResetLayout}
+        hiddenPanelCount={hiddenPanelIds.length}
+        onTogglePanelDrawer={toggleDrawer}
+        isDrawerOpen={isDrawerOpen}
+      />
 
-      <Box flex="1" p={4} overflow="auto">
+      <Box
+        flex="1"
+        p={4}
+        overflow="auto"
+        className={`dashboard-grid-area ${isDragging ? 'is-dragging' : ''}`}
+      >
         <ResponsiveGridLayout
           className="layout"
-          layouts={layouts}
+          layouts={filteredLayouts}
           breakpoints={breakpoints}
           cols={cols}
           rowHeight={50}
@@ -163,18 +306,36 @@ export function DashboardLayout() {
           isResizable={true}
           isDraggable={true}
         >
-          {panels.map((panel) => {
+          {visiblePanelConfigs.map((panel) => {
             const Component = panel.component;
+            const isLastPanel = visiblePanelIds.length === 1;
             return (
               <Box key={panel.id}>
-                <PanelWrapper title={panel.title}>
-                  <Component />
-                </PanelWrapper>
+                <DraggablePanelWrapper
+                  panelId={panel.id}
+                  title={panel.title}
+                  isLastPanel={isLastPanel}
+                >
+                  <WidgetErrorBoundary widgetName={panel.title}>
+                    <Component />
+                  </WidgetErrorBoundary>
+                </DraggablePanelWrapper>
               </Box>
             );
           })}
         </ResponsiveGridLayout>
       </Box>
+
+      {/* Panel Drawer */}
+      <PanelDrawer
+        isOpen={isDrawerOpen}
+        onClose={handleDrawerClose}
+        hiddenPanels={hiddenPanelConfigs}
+        onRestorePanel={handleRestorePanel}
+        onHidePanel={handleHidePanel}
+        isDragging={isDragging}
+        headerHeight={headerHeight}
+      />
     </Flex>
   );
 }

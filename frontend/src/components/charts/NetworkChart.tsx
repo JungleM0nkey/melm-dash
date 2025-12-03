@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   AreaChart,
   Area,
@@ -6,20 +7,14 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts';
-import { Box, Text } from '@chakra-ui/react';
+import { Box, Text, useToken } from '@chakra-ui/react';
 import type { TimeSeriesPoint } from '@melm-dash/shared-types';
+import { useInterpolatedData } from '../../hooks/useInterpolatedData';
+import { formatSpeed } from '../../utils/formatters';
 
 interface NetworkChartProps {
   data: TimeSeriesPoint<{ download: number; upload: number }>[];
   height?: number;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B/s';
-  const k = 1024;
-  const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 function formatTime(timestamp: number): string {
@@ -52,7 +47,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
       </Text>
       {payload.map((entry) => (
         <Text key={entry.dataKey} fontSize="sm" color={entry.dataKey === 'download' ? 'chart.download' : 'chart.upload'}>
-          {entry.dataKey === 'download' ? '↓' : '↑'} {formatBytes(entry.value)}
+          {entry.dataKey === 'download' ? '↓' : '↑'} {formatSpeed(entry.value)}
         </Text>
       ))}
     </Box>
@@ -60,11 +55,26 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 }
 
 export function NetworkChart({ data, height = 100 }: NetworkChartProps) {
-  const chartData = data.map((point) => ({
-    download: point.data.download,
-    upload: point.data.upload,
-    timestamp: point.timestamp,
-  }));
+  // Get theme-aware colors
+  const [downloadColor, uploadColor, axisColor] = useToken('colors', [
+    'chart.downloadLine',
+    'chart.uploadLine',
+    'chart.axis',
+  ]);
+
+  const rawChartData = useMemo(
+    () =>
+      data.map((point) => ({
+        download: point.data.download,
+        upload: point.data.upload,
+        timestamp: point.timestamp,
+      })),
+    [data]
+  );
+
+  // Apply smooth interpolation between data updates
+  // The hook handles first render internally (skips animation when no previous data)
+  const chartData = useInterpolatedData(rawChartData);
 
   // Calculate max value for Y axis
   const maxValue = Math.max(
@@ -77,25 +87,25 @@ export function NetworkChart({ data, height = 100 }: NetworkChartProps) {
       <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
         <defs>
           <linearGradient id="gradient-download" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#4299E1" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#4299E1" stopOpacity={0} />
+            <stop offset="5%" stopColor={downloadColor} stopOpacity={0.3} />
+            <stop offset="95%" stopColor={downloadColor} stopOpacity={0} />
           </linearGradient>
           <linearGradient id="gradient-upload" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#48BB78" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#48BB78" stopOpacity={0} />
+            <stop offset="5%" stopColor={uploadColor} stopOpacity={0.3} />
+            <stop offset="95%" stopColor={uploadColor} stopOpacity={0} />
           </linearGradient>
         </defs>
         <XAxis
           dataKey="timestamp"
           tickFormatter={formatTime}
-          tick={{ fontSize: 10, fill: '#a0a0a0' }}
+          tick={{ fontSize: 10, fill: axisColor }}
           axisLine={false}
           tickLine={false}
           interval="preserveStartEnd"
         />
         <YAxis
-          tickFormatter={formatBytes}
-          tick={{ fontSize: 10, fill: '#a0a0a0' }}
+          tickFormatter={formatSpeed}
+          tick={{ fontSize: 10, fill: axisColor }}
           axisLine={false}
           tickLine={false}
           domain={[0, maxValue]}
@@ -105,7 +115,7 @@ export function NetworkChart({ data, height = 100 }: NetworkChartProps) {
         <Area
           type="monotone"
           dataKey="download"
-          stroke="#4299E1"
+          stroke={downloadColor}
           strokeWidth={2}
           fill="url(#gradient-download)"
           isAnimationActive={false}
@@ -113,7 +123,7 @@ export function NetworkChart({ data, height = 100 }: NetworkChartProps) {
         <Area
           type="monotone"
           dataKey="upload"
-          stroke="#48BB78"
+          stroke={uploadColor}
           strokeWidth={2}
           fill="url(#gradient-upload)"
           isAnimationActive={false}

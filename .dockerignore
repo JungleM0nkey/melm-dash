@@ -23,9 +23,11 @@ dist
 *.log
 coverage
 
-# Documentation
-*.md
+# Documentation (keep README for registry description)
 docs
+CHANGELOG.md
+CONTRIBUTING.md
+# Note: README.md is intentionally NOT excluded for GHCR package description
 
 # Tests
 **/*.test.ts
