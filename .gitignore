@@ -146,7 +146,7 @@ docs/.vitepress/cache/
 # ───────────────────────────────────────────────────
 # Uncomment if you don't want to track Claude docs
 claudedocs/
-
+CLAUDE.md
 # ───────────────────────────────────────────────────
 # Optional: Large Assets
 # ───────────────────────────────────────────────────

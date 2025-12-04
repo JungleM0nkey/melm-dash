@@ -105,31 +105,25 @@ function dashboardReducer(
         lastUpdate: Date.now(),
       };
 
-    case 'SET_CPU':
+    case 'SET_CPU': {
+      const { history, ...cpuMetrics } = action.payload;
       return {
         ...state,
-        cpu: {
-          usage: action.payload.usage,
-          cores: action.payload.cores,
-          model: action.payload.model,
-          speed: action.payload.speed,
-        },
-        cpuHistory: action.payload.history,
+        cpu: cpuMetrics,
+        cpuHistory: history,
         lastUpdate: Date.now(),
       };
+    }
 
-    case 'SET_MEMORY':
+    case 'SET_MEMORY': {
+      const { history, ...memoryMetrics } = action.payload;
       return {
         ...state,
-        memory: {
-          usage: action.payload.usage,
-          used: action.payload.used,
-          total: action.payload.total,
-          available: action.payload.available,
-        },
-        memoryHistory: action.payload.history,
+        memory: memoryMetrics,
+        memoryHistory: history,
         lastUpdate: Date.now(),
       };
+    }
 
     case 'SET_DOCKER':
       return { ...state, docker: action.payload, lastUpdate: Date.now() };

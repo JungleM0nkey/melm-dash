@@ -21,7 +21,13 @@
       "Bash(node:*)",
       "Bash(pnpm --filter @melm-dash/shared-types build:*)",
       "Bash(lsof:*)",
-      "Bash(pnpm lint:*)"
+      "Bash(pnpm lint:*)",
+      "Bash(docker compose build:*)",
+      "Bash(docker:*)",
+      "Bash(docker compose:*)",
+      "Bash(test:*)",
+      "Bash(gh run list:*)",
+      "Bash(pnpm test:*)"
     ],
     "deny": [],
     "ask": []
