@@ -152,6 +152,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64
           push: false
+          load: true
           tags: melm-dash:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
