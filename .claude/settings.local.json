@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "mcp__sequential-thinking__sequentialthinking",
       "Bash(tree:*)",
       "Bash(cat:*)",
       "Bash(pnpm --filter @melm-dash/frontend typecheck:*)",
@@ -27,7 +28,13 @@
       "Bash(docker compose:*)",
       "Bash(test:*)",
       "Bash(gh run list:*)",
-      "Bash(pnpm test:*)"
+      "Bash(pnpm test:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create --title \"fix: CI docker-build-test workflow\" --body \"$(cat <<''EOF''\n## Summary\nFixes CI workflow failure in docker-build-test job by adding `load: true` to the Docker build step.\n\n## Problem\nThe CI workflow was failing with error:\n```\nUnable to find image ''melm-dash:test'' locally\ndocker: Error response from daemon: pull access denied for melm-dash\n```\n\nThis occurred because `docker/build-push-action@v6` with `push: false` builds the image but doesn''t automatically load it into the local Docker daemon. The subsequent `docker run` test step couldn''t find the image.\n\n## Solution\nAdded `load: true` parameter to the Build Docker image step in `.github/workflows/ci.yml`. This ensures the built image is loaded into the local Docker daemon, making it available for the container start test.\n\n## Changes\n- [.github/workflows/ci.yml](.github/workflows/ci.yml#L155): Added `load: true` to docker-build-test job\n\n## Testing\n- Previous commit (bb5c17a) fixed the TypeScript compilation issues with physicalCores\n- This commit should allow the docker-build-test job to complete successfully\n- CI will validate the fix automatically upon PR creation\n\n## Related\n- Part of v1.0.0 Docker build fix roadmap\n- Follows up on commit bb5c17a \"update docker image workflow\"\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\nEOF\n)\")",
+      "Bash(gh release:*)"
     ],
     "deny": [],
     "ask": []

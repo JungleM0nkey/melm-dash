@@ -189,7 +189,7 @@ jobs:
       # Step 8: Security Scan with Trivy (BEFORE push)
       # ─────────────────────────────────────────────────────────────────────
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: ${{ env.IMAGE_NAME }}:scan
           format: 'table'
@@ -198,17 +198,28 @@ jobs:
           ignore-unfixed: true
 
       - name: Run Trivy for SARIF report
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.33.1
         if: always()
+        continue-on-error: true  # Don't fail workflow if SARIF generation fails
         with:
           image-ref: ${{ env.IMAGE_NAME }}:scan
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM'
 
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Check SARIF file creation
         if: always()
+        run: |
+          if [ -f trivy-results.sarif ]; then
+            echo "✅ SARIF file created successfully"
+            ls -lh trivy-results.sarif
+          else
+            echo "⚠️  SARIF file was not created - upload will be skipped"
+          fi
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
           category: 'container-security'
