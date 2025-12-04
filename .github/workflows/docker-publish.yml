@@ -178,7 +178,7 @@ jobs:
           platforms: linux/amd64  # Single platform for faster scan
           push: false
           load: true  # Load into local Docker daemon
-          tags: ${{ env.IMAGE_NAME }}:scan
+          tags: melm-dash:scan
           cache-from: type=gha
           build-args: |
             BUILD_DATE=${{ github.event.release.created_at || github.event.repository.updated_at }}
@@ -191,7 +191,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.33.1
         with:
-          image-ref: ${{ env.IMAGE_NAME }}:scan
+          image-ref: melm-dash:scan
           format: 'table'
           exit-code: '1'  # Fail on CRITICAL vulnerabilities
           severity: 'CRITICAL'
@@ -202,7 +202,7 @@ jobs:
         if: always()
         continue-on-error: true  # Don't fail workflow if SARIF generation fails
         with:
-          image-ref: ${{ env.IMAGE_NAME }}:scan
+          image-ref: melm-dash:scan
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM'
